@@ -131,7 +131,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(
                             userId.toString(),
                             null,
-                            List.of(new SimpleGrantedAuthority(rol))
+                            List.of(new SimpleGrantedAuthority("ROLE_" + rol.toUpperCase()))
                     );
 
             // 7. Establecer en el contexto de seguridad
@@ -165,7 +165,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private boolean isRolValido(String rol) {
         // Validar que el rol esté en la lista de roles permitidos
-        return List.of("ROLE_ADMIN", "ROLE_USER", "ROLE_EMPLEADO", "ROLE_CLIENT").contains(rol.toUpperCase());
+        return List.of("ADMIN", "USER", "EMPLEADO", "CLIENT").contains(rol.toUpperCase());
     }
 
     private void enviarError(HttpServletResponse response, int status, String message) {
