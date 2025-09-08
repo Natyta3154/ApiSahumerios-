@@ -1,11 +1,7 @@
 package com.example.AppSaumerios.Service;
 
 import com.example.AppSaumerios.dto.ProductoDTO;
-import com.example.AppSaumerios.entity.Atributo;
-import com.example.AppSaumerios.entity.Descuento;
-import com.example.AppSaumerios.entity.Fragancia;
-import com.example.AppSaumerios.entity.ProductoAtributo;
-import com.example.AppSaumerios.entity.Productos;
+import com.example.AppSaumerios.entity.*;
 import com.example.AppSaumerios.repository.AtributoRepository;
 import com.example.AppSaumerios.repository.CategoriaRepository;
 import com.example.AppSaumerios.repository.DescuentoRepository;
@@ -58,7 +54,6 @@ public class ProductosServices {
         validarStockYPrecio(productos);
         return productoRepository.save(productos);
     }
-
     public Productos actualizarProductos(Long id, Productos productoActualizado,
                                          BigDecimal porcentajeDescuento,
                                          LocalDate fechaInicioDescuento,
@@ -77,12 +72,43 @@ public class ProductosServices {
         if (productoActualizado.getActivo() != null) p.setActivo(productoActualizado.getActivo());
         if (productoActualizado.getImagenurl() != null) p.setImagenurl(productoActualizado.getImagenurl());
         if (productoActualizado.getIdCategoria() != null) p.setIdCategoria(productoActualizado.getIdCategoria());
+        if (productoActualizado.getPrecioMayorista() != null) p.setPrecioMayorista(productoActualizado.getPrecioMayorista());
+        if (productoActualizado.getTotalIngresado() != null) p.setTotalIngresado(productoActualizado.getTotalIngresado());
+
+        // ===== Actualizar categoría =====
+        if (productoActualizado.getCategoria() != null) {
+            Categoria cat = categoriaRepository.findByNombre(productoActualizado.getCategoria().getNombre())
+                    .orElseGet(() -> {
+                        Categoria nueva = new Categoria();
+                        nueva.setNombre(productoActualizado.getCategoria().getNombre());
+                        return categoriaRepository.save(nueva);
+                    });
+            p.setCategoria(cat);
+            p.setIdCategoria(cat.getId());
+        }
+
+        // ===== Actualizar fragancias =====
+        if (productoActualizado.getFragancias() != null && !productoActualizado.getFragancias().isEmpty()) {
+            List<Fragancia> fraganciasActualizadas = productoActualizado.getFragancias().stream()
+                    .map(f -> fraganciaRepository.findByNombre(f.getNombre())
+                            .orElseGet(() -> fraganciaRepository.save(f)))
+                    .collect(Collectors.toList());
+            p.setFragancias(fraganciasActualizadas);
+        }
+
+        // ===== Actualizar atributos =====
+        if (productoActualizado.getProductoAtributos() != null && !productoActualizado.getProductoAtributos().isEmpty()) {
+            p.getProductoAtributos().clear();
+            productoActualizado.getProductoAtributos().forEach(pa ->
+                    p.addAtributo(pa.getAtributo(), pa.getValor()));
+        }
 
         // ===== Actualizar descuento =====
         actualizarDescuento(p, porcentajeDescuento, fechaInicioDescuento, fechaFinDescuento);
 
         return productoRepository.save(p);
     }
+
 
     private void validarStockYPrecio(Productos producto) {
         BigDecimal zero = BigDecimal.ZERO;
