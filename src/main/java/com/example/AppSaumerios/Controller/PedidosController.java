@@ -135,7 +135,7 @@ public class PedidosController {
         dto.setCantidad(detalle.getCantidad());
         dto.setPrecioUnitario(detalle.getProducto().getPrecio());
         dto.setSubtotal(detalle.getSubtotal());
-        dto.setImagenUrl(detalle.getProducto().getImagenurl());
+        dto.setImagenUrl(detalle.getProducto().getImagenUrl());
         return dto;
     }
 }

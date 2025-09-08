@@ -23,7 +23,7 @@ public class Productos {
     private Long id;
 
     @Column(name = "total_ingresado")
-    private Integer totalIngresado = 0; // inicializado en 0
+    private Integer totalIngresado = 0;
 
 
     @NotBlank(message = "El nombre es obligatorio")
@@ -35,7 +35,7 @@ public class Productos {
     @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor a 0")
     private BigDecimal precio;
 
-    @Column(name = "precio_mayorista", precision = 10, scale = 2)
+    @Column(name = "precio_mayorista", precision = 10, scale = 2, nullable = false)
     private BigDecimal precioMayorista;
 
     @Min(value = 0, message = "El stock no puede ser negativo")
@@ -45,7 +45,7 @@ public class Productos {
     private Long idCategoria;
 
     @Column(name = "imagen_url")
-    private String imagenurl;
+    private String imagenUrl;
 
     @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
@@ -96,17 +96,19 @@ public class Productos {
     // ======================
     public Productos() {}
 
-    public Productos(Long id, Integer totalIngresado, String nombre, String descripcion, BigDecimal precio, BigDecimal precioMayorista, int stock,
-                     Long idCategoria, String imagenurl, LocalDateTime fechaCreacion, Boolean activo) {
+    public Productos(Long id, Integer totalIngresado, String nombre, String descripcion,
+                     BigDecimal precio, BigDecimal precioMayorista, int stock,
+                     Long idCategoria, String imagenurl,
+                     LocalDateTime fechaCreacion, Boolean activo) {
         this.id = id;
         this.totalIngresado = totalIngresado;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.precio = precio;
-        this.precioMayorista = precioMayorista;
+        this.precioMayorista = (precioMayorista != null) ? precioMayorista : BigDecimal.ZERO;
         this.stock = stock;
         this.idCategoria = idCategoria;
-        this.imagenurl = imagenurl;
+        this.imagenUrl = imagenurl;
         this.fechaCreacion = fechaCreacion;
         this.activo = activo;
     }
@@ -132,7 +134,9 @@ public class Productos {
     public void setPrecio(BigDecimal precio) { this.precio = precio; }
 
     public BigDecimal getPrecioMayorista() { return precioMayorista; }
-    public void setPrecioMayorista(BigDecimal precioMayorista) {this.precioMayorista = precioMayorista;}
+    public void setPrecioMayorista(BigDecimal precioMayorista) {
+        this.precioMayorista = (precioMayorista != null) ? precioMayorista : BigDecimal.ZERO;
+    }
 
     public int getStock() { return stock; }
     public void setStock(int stock) { this.stock = stock; }
@@ -140,8 +144,8 @@ public class Productos {
     public Long getIdCategoria() { return idCategoria; }
     public void setIdCategoria(Long idCategoria) { this.idCategoria = idCategoria; }
 
-    public String getImagenurl() { return imagenurl; }
-    public void setImagenurl(String imagenurl) { this.imagenurl = imagenurl; }
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenurl) { this.imagenUrl = imagenurl; }
 
     public LocalDateTime getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }

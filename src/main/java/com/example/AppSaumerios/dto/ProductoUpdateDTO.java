@@ -65,7 +65,7 @@ public class ProductoUpdateDTO {
         producto.setPrecio(this.precio);
         producto.setStock(this.stock != null ? this.stock : 0);
         producto.setActivo(this.activo != null ? this.activo : true);
-        producto.setImagenurl(this.imagenUrl);
+        producto.setImagenUrl(this.imagenUrl);
         producto.setIdCategoria(this.idCategoria);
         return producto;
     }

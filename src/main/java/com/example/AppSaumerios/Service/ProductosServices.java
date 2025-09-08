@@ -12,7 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,6 +56,7 @@ public class ProductosServices {
         validarStockYPrecio(productos);
         return productoRepository.save(productos);
     }
+
     public Productos actualizarProductos(Long id, Productos productoActualizado,
                                          BigDecimal porcentajeDescuento,
                                          LocalDate fechaInicioDescuento,
@@ -70,10 +73,12 @@ public class ProductosServices {
         if (productoActualizado.getPrecio() != null) p.setPrecio(productoActualizado.getPrecio());
         if (productoActualizado.getStock() >= 0) p.setStock(productoActualizado.getStock());
         if (productoActualizado.getActivo() != null) p.setActivo(productoActualizado.getActivo());
-        if (productoActualizado.getImagenurl() != null) p.setImagenurl(productoActualizado.getImagenurl());
+        if (productoActualizado.getImagenUrl() != null) p.setImagenUrl(productoActualizado.getImagenUrl());
         if (productoActualizado.getIdCategoria() != null) p.setIdCategoria(productoActualizado.getIdCategoria());
-        if (productoActualizado.getPrecioMayorista() != null) p.setPrecioMayorista(productoActualizado.getPrecioMayorista());
-        if (productoActualizado.getTotalIngresado() != null) p.setTotalIngresado(productoActualizado.getTotalIngresado());
+        if (productoActualizado.getPrecioMayorista() != null)
+            p.setPrecioMayorista(productoActualizado.getPrecioMayorista());
+        if (productoActualizado.getTotalIngresado() != null)
+            p.setTotalIngresado(productoActualizado.getTotalIngresado());
 
         // ===== Actualizar categoría =====
         if (productoActualizado.getCategoria() != null) {
@@ -157,14 +162,15 @@ public class ProductosServices {
     }
 
     public ProductoDTO mapToDTO(Productos producto) {
-        ProductoDTO dto = new ProductoDTO( );
+        ProductoDTO dto = new ProductoDTO();
         dto.setId(producto.getId());
         dto.setNombre(producto.getNombre());
         dto.setDescripcion(producto.getDescripcion());
         dto.setPrecio(producto.getPrecio());
-        dto.setPrecioMayorista(dto.getPrecioMayorista());
+        dto.setPrecioMayorista(producto.getPrecioMayorista()); // 🔥 CORREGIDO
+        dto.setTotalIngresado(producto.getTotalIngresado());
         dto.setStock(producto.getStock());
-        dto.setImagenUrl(producto.getImagenurl());
+        dto.setImagenUrl(producto.getImagenUrl());
         dto.setActivo(producto.getActivo());
 
         // Categoría
@@ -209,41 +215,58 @@ public class ProductosServices {
     // =========================
     @Transactional
     public Productos crearProductoDesdeDTO(ProductoDTO dto) {
-        // 1️⃣ Crear producto básico
         Productos producto = new Productos();
+
+        // ----------------------
+        // Campos básicos
+        // ----------------------
         producto.setNombre(dto.getNombre());
         producto.setDescripcion(dto.getDescripcion());
-        producto.setPrecio(dto.getPrecio());
-        producto.setStock(dto.getStock() != null ? dto.getStock() : 0);
-        // Inicializar totalIngresado igual al stock inicial
-        producto.setTotalIngresado(dto.getStock() != null ? dto.getStock() : 0);
-        producto.setImagenurl(dto.getImagenUrl());
+
+        // Dentro de crearProductoDesdeDTO
+        BigDecimal precioBase = dto.getPrecio() != null ? dto.getPrecio() : BigDecimal.ZERO;
+        BigDecimal precioMayorista = dto.getPrecioMayorista() != null
+                ? dto.getPrecioMayorista()
+                : precioBase;
+
+// Asegurar que nunca sea null
+        if (precioMayorista == null) {
+            precioMayorista = BigDecimal.ZERO;
+        }
+
+        producto.setPrecioMayorista(precioMayorista.setScale(2, RoundingMode.HALF_UP));
+
+
+        int stock = dto.getStock() != null ? dto.getStock() : 0;
+        producto.setStock(stock);
+
+        int totalIngresado = dto.getTotalIngresado() != null ? dto.getTotalIngresado() : stock;
+        producto.setTotalIngresado(totalIngresado);
+
+        producto.setImagenUrl(dto.getImagenUrl());
         producto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        producto.setFechaCreacion(LocalDateTime.now());
 
-        // Asignar categoría usando nombre
-        if (dto.getCategoriaNombre() != null) {
-            final Productos prod = producto;
-            categoriaRepository.findByNombre(dto.getCategoriaNombre())
-                    .ifPresent(categoria -> prod.setIdCategoria(categoria.getId()));
+        // ----------------------
+        // Categoría
+        // ----------------------
+        if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
+            Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
+                    .orElseGet(() -> {
+                        Categoria nueva = new Categoria();
+                        nueva.setNombre(dto.getCategoriaNombre());
+                        return categoriaRepository.save(nueva);
+                    });
+            producto.setCategoria(cat);
+            producto.setIdCategoria(cat.getId());
         }
 
-        if (dto.getPrecioMayorista() != null) {
-            producto.setPrecioMayorista(dto.getPrecioMayorista());
-        }
-
-        // Guardar primero para generar ID
+        // Guardar producto primero para generar ID
         producto = productoRepository.save(producto);
 
-        // 2️⃣ Actualizar precios de la categoría si corresponde
-        if (producto.getIdCategoria() != null && dto.getPrecio() != null && dto.getPrecioMayorista() != null) {
-            productoRepository.actualizarPreciosPorCategoria(
-                    producto.getIdCategoria(),
-                    dto.getPrecio(),
-                    dto.getPrecioMayorista()
-            );
-        }
-
-        // 3️⃣ Asignar fragancias
+        // ----------------------
+        // Fragancias
+        // ----------------------
         if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
             List<Fragancia> fragancias = dto.getFragancias().stream()
                     .map(nombre -> fraganciaRepository.findByNombre(nombre)
@@ -252,7 +275,9 @@ public class ProductosServices {
             producto.setFragancias(fragancias);
         }
 
-        // 4️⃣ Asignar atributos
+        // ----------------------
+        // Atributos
+        // ----------------------
         if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
             Productos finalProducto = producto;
             Set<ProductoAtributo> productoAtributos = dto.getAtributos().stream()
@@ -260,12 +285,25 @@ public class ProductosServices {
                         Atributo atributo = atributoRepository.findByNombre(aDto.getNombre())
                                 .orElseGet(() -> atributoRepository.save(new Atributo(aDto.getNombre())));
                         return new ProductoAtributo(finalProducto, atributo, aDto.getValor());
-                    }).collect(Collectors.toSet());
+                    })
+                    .collect(Collectors.toSet());
             producto.setProductoAtributos(productoAtributos);
+        }
+
+        // ----------------------
+        // Descuento
+        // ----------------------
+        if (dto.getPorcentajeDescuento() != null) {
+            Descuento descuento = new Descuento();
+            descuento.setProducto(producto);
+            descuento.setPorcentaje(dto.getPorcentajeDescuento());
+            descuento.setFechaInicio(dto.getFechaInicioDescuento() != null ? dto.getFechaInicioDescuento() : LocalDate.now());
+            descuento.setFechaFin(dto.getFechaFinDescuento() != null ? dto.getFechaFinDescuento() : LocalDate.now().plusDays(30));
+            descuento.setActivo(true);
+            producto.getDescuentos().add(descuento);
+            descuentoRepository.save(descuento);
         }
 
         return productoRepository.save(producto);
     }
-
-
 }

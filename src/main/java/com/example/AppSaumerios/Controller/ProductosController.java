@@ -17,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,11 +63,7 @@ public class ProductosController {
     // -------------------
     @PostMapping("/agregar")
     public ResponseEntity<ProductoDTO> crearProducto(@RequestBody ProductoDTO request) {
-
-
         // 1️⃣ Verificar si el producto ya existe por nombre
-        List<Productos> productosExistentes = productoRepository.findAllByNombre(request.getNombre());
-
         Optional<Productos> productoExistente = productoRepository.findByNombre(request.getNombre());
 
         if (productoExistente.isPresent()) {
@@ -74,15 +72,29 @@ public class ProductosController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(dto);
         }
 
-
         // Crear producto normalmente
         Productos producto = new Productos();
         producto.setNombre(request.getNombre());
         producto.setDescripcion(request.getDescripcion());
         producto.setPrecio(request.getPrecio());
+
+        // 🔥 ESTABLECER PRECIO MAYORISTA (usar precio regular si no se especifica)
+        BigDecimal precioMayorista = request.getPrecioMayorista() != null
+                ? request.getPrecioMayorista()
+                : request.getPrecio();
+        producto.setPrecioMayorista(precioMayorista);
+
         producto.setStock(request.getStock());
-        producto.setImagenurl(request.getImagenUrl());
+
+        // 🔥 ESTABLECER TOTAL INGRESADO (usar stock si no se especifica)
+        Integer totalIngresado = request.getTotalIngresado() != null
+                ? request.getTotalIngresado()
+                : request.getStock();
+        producto.setTotalIngresado(totalIngresado);
+
+        producto.setImagenUrl(request.getImagenUrl());
         producto.setActivo(request.getActivo());
+        producto.setFechaCreacion(LocalDateTime.now()); // 🔥 Establecer fecha de creación
 
         // Buscar categoría por nombre; si no existe, crearla automáticamente
         Categoria categoria = categoriaRepository.findByNombre(request.getCategoriaNombre())
@@ -112,9 +124,9 @@ public class ProductosController {
         }
         producto.setFragancias(fragancias);
 
-// ========================
-// Asignar atributos
-// ========================
+        // ========================
+        // Asignar atributos
+        // ========================
         if (request.getAtributos() != null) {
             for (ProductoDTO.ProductoAtributoDTO attrDTO : request.getAtributos()) {
                 String nombreAttr = attrDTO.getNombre();
@@ -131,13 +143,11 @@ public class ProductosController {
             }
         }
 
-
         productoRepository.save(producto);
 
         ProductoDTO dto = productoservices.mapToDTO(producto);
         return ResponseEntity.ok(dto);
     }
-
 
 
 

@@ -1,5 +1,9 @@
 package com.example.AppSaumerios.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+
 import java.math.BigDecimal;
 import java.security.PublicKey;
 import java.time.LocalDate;
@@ -12,11 +16,19 @@ public class ProductoDTO {
         private Long id;
         private String nombre;
         private String descripcion;
-        private BigDecimal precio;
-        private BigDecimal precioMayorista;
+    @DecimalMin(value = "0.0", message = "El precio debe ser mayor o igual a 0")
+    private BigDecimal precio = BigDecimal.ZERO;
+
+    @DecimalMin(value = "0.0", message = "El precio mayorista debe ser mayor o igual a 0")
+    @JsonProperty("precioMayorista")
+    private BigDecimal precioMayorista = BigDecimal.ZERO;
+
+    @Min(value = 0, message = "El total ingresado no puede ser negativo")
+    @JsonProperty("totalIngresado")
         private Integer totalIngresado;
 
         private Integer stock;
+        @JsonProperty("imagenurl")
         private String imagenUrl;
         private Boolean activo;
         private String categoriaNombre;
