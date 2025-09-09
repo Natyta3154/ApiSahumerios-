@@ -6,6 +6,8 @@ import com.example.AppSaumerios.entity.Productos;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProductoUpdateDTO {
 
@@ -16,6 +18,7 @@ public class ProductoUpdateDTO {
     private Boolean activo;
     private String imagenUrl;
     private Long idCategoria;
+    private String categoriaNombre;
     private Integer totalIngresado;
     private BigDecimal precioMayorista;
     // Campos de descuento
@@ -23,9 +26,33 @@ public class ProductoUpdateDTO {
     private LocalDate fechaInicioDescuento;
     private LocalDate fechaFinDescuento;
 
+    // Lista de fragancias (nombres)
+    private List<String> fragancias = new ArrayList<>();
+
+    // Lista de atributos
+    private List<ProductoAtributoDTO> atributos = new ArrayList<>();
+
+    // Clase interna para los atributos
+    public static class ProductoAtributoDTO {
+        private String nombre;
+        private String valor;
+
+        // Getters y setters
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+        public String getValor() { return valor; }
+        public void setValor(String valor) { this.valor = valor; }
+    }
+
     // ======================
     // Getters y Setters
     // ======================
+
+
+
+    public String getCategoriaNombre() { return categoriaNombre; }
+    public void setCategoriaNombre(String categoriaNombre) { this.categoriaNombre = categoriaNombre;}
+
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 
@@ -62,6 +89,14 @@ public class ProductoUpdateDTO {
 
     public BigDecimal getPrecioMayorista() { return precioMayorista; }
     public void setPrecioMayorista(BigDecimal precioMayorista) { this.precioMayorista = precioMayorista;}
+
+    public List<String> getFragancias() { return fragancias; }
+    public void setFragancias(List<String> fragancias) { this.fragancias = fragancias; }
+
+    public List<ProductoAtributoDTO> getAtributos() { return atributos; }
+    public void setAtributos(List<ProductoAtributoDTO> atributos) { this.atributos = atributos; }
+
+
 
     // ======================
     // Conversión a entidad Productos

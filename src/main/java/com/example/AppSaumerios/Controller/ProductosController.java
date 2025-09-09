@@ -157,11 +157,8 @@ public class ProductosController {
             @RequestBody ProductoUpdateDTO dto) {
 
         Productos actualizado = productoservices.actualizarProductos(
-                id,
-                dto.toProductos(),
-                dto.getPorcentajeDescuento(),
-                dto.getFechaInicioDescuento(),
-                dto.getFechaFinDescuento()
+                id,dto
+
         );
 
         return ResponseEntity.ok(actualizado);

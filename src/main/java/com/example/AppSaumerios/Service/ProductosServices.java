@@ -1,6 +1,7 @@
 package com.example.AppSaumerios.Service;
 
 import com.example.AppSaumerios.dto.ProductoDTO;
+import com.example.AppSaumerios.dto.ProductoUpdateDTO;
 import com.example.AppSaumerios.entity.*;
 import com.example.AppSaumerios.repository.AtributoRepository;
 import com.example.AppSaumerios.repository.CategoriaRepository;
@@ -57,19 +58,17 @@ public class ProductosServices {
         return productoRepository.save(productos);
     }
 
-    public Productos actualizarProductos(Long id, Productos productoActualizado,
-                                         BigDecimal porcentajeDescuento,
-                                         LocalDate fechaInicioDescuento,
-                                         LocalDate fechaFinDescuento) {
-
+    public Productos actualizarProductos(Long id, ProductoUpdateDTO dto) {
         Productos p = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
 
+        // Convertir el DTO a una entidad Productos para los campos básicos
+        Productos productoActualizado = dto.toProductos();
+
+        // Validar stock y precio
         validarStockYPrecio(productoActualizado);
 
-        // ======================
         // Actualizar campos básicos
-        // ======================
         if (productoActualizado.getNombre() != null) p.setNombre(productoActualizado.getNombre());
         if (productoActualizado.getDescripcion() != null) p.setDescripcion(productoActualizado.getDescripcion());
         if (productoActualizado.getPrecio() != null) p.setPrecio(productoActualizado.getPrecio());
@@ -80,51 +79,45 @@ public class ProductosServices {
         if (productoActualizado.getPrecioMayorista() != null)
             p.setPrecioMayorista(productoActualizado.getPrecioMayorista());
 
-        // ⚡ Corregido: mantener totalIngresado si no viene explícitamente
         if (productoActualizado.getTotalIngresado() != null) {
             p.setTotalIngresado(productoActualizado.getTotalIngresado());
         } else if (p.getTotalIngresado() == null) {
-            p.setTotalIngresado(p.getStock()); // Inicializar con stock si estaba null
+            p.setTotalIngresado(p.getStock());
         }
 
-        // ======================
-        // Actualizar categoría
-        // ======================
-        if (productoActualizado.getCategoria() != null) {
-            Categoria cat = categoriaRepository.findByNombre(productoActualizado.getCategoria().getNombre())
+        // Actualizar categoría por nombre si se proporciona
+        if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
+            Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
                     .orElseGet(() -> {
                         Categoria nueva = new Categoria();
-                        nueva.setNombre(productoActualizado.getCategoria().getNombre());
+                        nueva.setNombre(dto.getCategoriaNombre());
                         return categoriaRepository.save(nueva);
                     });
             p.setCategoria(cat);
             p.setIdCategoria(cat.getId());
         }
 
-        // ======================
         // Actualizar fragancias
-        // ======================
-        if (productoActualizado.getFragancias() != null && !productoActualizado.getFragancias().isEmpty()) {
-            List<Fragancia> fraganciasActualizadas = productoActualizado.getFragancias().stream()
-                    .map(f -> fraganciaRepository.findByNombre(f.getNombre())
-                            .orElseGet(() -> fraganciaRepository.save(f)))
+        if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
+            List<Fragancia> fraganciasActualizadas = dto.getFragancias().stream()
+                    .map(nombre -> fraganciaRepository.findByNombre(nombre)
+                            .orElseGet(() -> fraganciaRepository.save(new Fragancia(nombre))))
                     .collect(Collectors.toList());
             p.setFragancias(fraganciasActualizadas);
         }
 
-        // ======================
         // Actualizar atributos
-        // ======================
-        if (productoActualizado.getProductoAtributos() != null && !productoActualizado.getProductoAtributos().isEmpty()) {
+        if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
             p.getProductoAtributos().clear();
-            productoActualizado.getProductoAtributos().forEach(pa ->
-                    p.addAtributo(pa.getAtributo(), pa.getValor()));
+            for (ProductoUpdateDTO.ProductoAtributoDTO attrDTO : dto.getAtributos()) {
+                Atributo atributo = atributoRepository.findByNombre(attrDTO.getNombre())
+                        .orElseGet(() -> atributoRepository.save(new Atributo(attrDTO.getNombre())));
+                p.addAtributo(atributo, attrDTO.getValor());
+            }
         }
 
-        // ======================
         // Actualizar descuento
-        // ======================
-        actualizarDescuento(p, porcentajeDescuento, fechaInicioDescuento, fechaFinDescuento);
+        actualizarDescuento(p, dto.getPorcentajeDescuento(), dto.getFechaInicioDescuento(), dto.getFechaFinDescuento());
 
         return productoRepository.save(p);
     }
