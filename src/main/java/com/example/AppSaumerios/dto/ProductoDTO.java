@@ -28,8 +28,12 @@ public class ProductoDTO {
         private Integer totalIngresado;
 
         private Integer stock;
+
+
         @JsonProperty("imagenurl")
         private String imagenUrl;
+
+
         private Boolean activo;
         private String categoriaNombre;
         private String mensaje;

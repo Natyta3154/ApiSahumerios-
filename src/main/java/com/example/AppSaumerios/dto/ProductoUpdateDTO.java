@@ -16,7 +16,8 @@ public class ProductoUpdateDTO {
     private Boolean activo;
     private String imagenUrl;
     private Long idCategoria;
-
+    private Integer totalIngresado;
+    private BigDecimal precioMayorista;
     // Campos de descuento
     private BigDecimal porcentajeDescuento;
     private LocalDate fechaInicioDescuento;
@@ -55,6 +56,13 @@ public class ProductoUpdateDTO {
     public LocalDate getFechaFinDescuento() { return fechaFinDescuento; }
     public void setFechaFinDescuento(LocalDate fechaFinDescuento) { this.fechaFinDescuento = fechaFinDescuento; }
 
+
+    public Integer getTotalIngresado() { return totalIngresado; }
+    public void setTotalIngresado(Integer totalIngresado) { this.totalIngresado = totalIngresado; }
+
+    public BigDecimal getPrecioMayorista() { return precioMayorista; }
+    public void setPrecioMayorista(BigDecimal precioMayorista) { this.precioMayorista = precioMayorista;}
+
     // ======================
     // Conversión a entidad Productos
     // ======================
@@ -67,6 +75,8 @@ public class ProductoUpdateDTO {
         producto.setActivo(this.activo != null ? this.activo : true);
         producto.setImagenUrl(this.imagenUrl);
         producto.setIdCategoria(this.idCategoria);
+        producto.setTotalIngresado(this.totalIngresado);
+        producto.setPrecioMayorista(this.precioMayorista);
         return producto;
     }
 }
