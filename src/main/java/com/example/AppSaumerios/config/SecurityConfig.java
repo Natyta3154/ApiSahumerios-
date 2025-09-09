@@ -89,7 +89,8 @@ public class SecurityConfig {
                 "http://localhost:8080",
                 "http://localhost:9002",   // 👈 tu frontend
                 "https://api-sahumerios.vercel.app",
-                "https://hernan.alwaysdata.net"
+                "https://hernan.alwaysdata.net",
+                "https://6000-firebase-studio-1756885120718.cluster-f73ibkkuije66wssuontdtbx6q.cloudworkstations.dev"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(
