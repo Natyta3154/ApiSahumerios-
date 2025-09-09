@@ -67,7 +67,9 @@ public class ProductosServices {
 
         validarStockYPrecio(productoActualizado);
 
+        // ======================
         // Actualizar campos básicos
+        // ======================
         if (productoActualizado.getNombre() != null) p.setNombre(productoActualizado.getNombre());
         if (productoActualizado.getDescripcion() != null) p.setDescripcion(productoActualizado.getDescripcion());
         if (productoActualizado.getPrecio() != null) p.setPrecio(productoActualizado.getPrecio());
@@ -77,10 +79,17 @@ public class ProductosServices {
         if (productoActualizado.getIdCategoria() != null) p.setIdCategoria(productoActualizado.getIdCategoria());
         if (productoActualizado.getPrecioMayorista() != null)
             p.setPrecioMayorista(productoActualizado.getPrecioMayorista());
-        if (productoActualizado.getTotalIngresado() != null)
-            p.setTotalIngresado(productoActualizado.getTotalIngresado());
 
-        // ===== Actualizar categoría =====
+        // ⚡ Corregido: mantener totalIngresado si no viene explícitamente
+        if (productoActualizado.getTotalIngresado() != null) {
+            p.setTotalIngresado(productoActualizado.getTotalIngresado());
+        } else if (p.getTotalIngresado() == null) {
+            p.setTotalIngresado(p.getStock()); // Inicializar con stock si estaba null
+        }
+
+        // ======================
+        // Actualizar categoría
+        // ======================
         if (productoActualizado.getCategoria() != null) {
             Categoria cat = categoriaRepository.findByNombre(productoActualizado.getCategoria().getNombre())
                     .orElseGet(() -> {
@@ -92,7 +101,9 @@ public class ProductosServices {
             p.setIdCategoria(cat.getId());
         }
 
-        // ===== Actualizar fragancias =====
+        // ======================
+        // Actualizar fragancias
+        // ======================
         if (productoActualizado.getFragancias() != null && !productoActualizado.getFragancias().isEmpty()) {
             List<Fragancia> fraganciasActualizadas = productoActualizado.getFragancias().stream()
                     .map(f -> fraganciaRepository.findByNombre(f.getNombre())
@@ -101,18 +112,23 @@ public class ProductosServices {
             p.setFragancias(fraganciasActualizadas);
         }
 
-        // ===== Actualizar atributos =====
+        // ======================
+        // Actualizar atributos
+        // ======================
         if (productoActualizado.getProductoAtributos() != null && !productoActualizado.getProductoAtributos().isEmpty()) {
             p.getProductoAtributos().clear();
             productoActualizado.getProductoAtributos().forEach(pa ->
                     p.addAtributo(pa.getAtributo(), pa.getValor()));
         }
 
-        // ===== Actualizar descuento =====
+        // ======================
+        // Actualizar descuento
+        // ======================
         actualizarDescuento(p, porcentajeDescuento, fechaInicioDescuento, fechaFinDescuento);
 
         return productoRepository.save(p);
     }
+
 
 
     private void validarStockYPrecio(Productos producto) {

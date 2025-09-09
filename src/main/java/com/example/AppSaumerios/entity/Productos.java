@@ -65,7 +65,7 @@ public class Productos {
         return list;
     }
 
-    // Luego declarás
+    // Luego
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private Set<ProductoAtributo> productoAtributos = new HashSet<>();
