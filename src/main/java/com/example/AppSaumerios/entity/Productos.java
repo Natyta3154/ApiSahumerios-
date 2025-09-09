@@ -56,7 +56,6 @@ public class Productos {
     @Transient
     public List<Map<String, String>> getAtributos() {
         List<Map<String, String>> list = new ArrayList<>();
-        ProductoAtributo[] productoAtributos = new ProductoAtributo[0]; // <-- PROBLEMA
         for (ProductoAtributo pa : this.productoAtributos) {
             Map<String, String> map = new HashMap<>();
             map.put("nombre", pa.getAtributo().getNombre());
@@ -68,6 +67,7 @@ public class Productos {
 
     // Luego declarás
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private Set<ProductoAtributo> productoAtributos = new HashSet<>();
 
 

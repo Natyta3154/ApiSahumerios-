@@ -2,6 +2,7 @@ package com.example.AppSaumerios.entity;
 
 import com.example.AppSaumerios.entity.Atributo;
 import com.example.AppSaumerios.entity.Productos;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.io.Serializable;
 
@@ -15,6 +16,7 @@ public class ProductoAtributo implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "producto_id", nullable = false)
+    @JsonBackReference
     private Productos producto;
 
     @ManyToOne
