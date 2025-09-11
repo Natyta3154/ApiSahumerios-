@@ -1,8 +1,9 @@
 package com.example.AppSaumerios.Controller;
 
-
-import com.example.AppSaumerios.Service.ProductosServices;
+import com.example.AppSaumerios.Service.ProductoService;
+import com.example.AppSaumerios.Service.OfertaService;
 import com.example.AppSaumerios.dto.ProductoDTO;
+import com.example.AppSaumerios.dto.ProductoOfertaDTO;
 import com.example.AppSaumerios.dto.ProductoUpdateDTO;
 import com.example.AppSaumerios.entity.Atributo;
 import com.example.AppSaumerios.entity.Categoria;
@@ -13,7 +14,6 @@ import com.example.AppSaumerios.repository.CategoriaRepository;
 import com.example.AppSaumerios.repository.FraganciaRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,82 +21,109 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 @CrossOrigin(origins = "http://localhost:9002")
 @RestController
 @RequestMapping("/productos")
 public class ProductosController {
 
     @Autowired
-    private ProductosServices productoservices;
+    private ProductoService productoservice;
 
     @Autowired
-    FraganciaRepository fraganciaRepository;
+    private OfertaService ofertaService;
 
     @Autowired
-    CategoriaRepository categoriaRepository;
+    private FraganciaRepository fraganciaRepository;
 
     @Autowired
-    ProductoRepository productoRepository;
+    private CategoriaRepository categoriaRepository;
+
     @Autowired
-    AtributoRepository atributoRepository;
+    private ProductoRepository productoRepository;
+
+    @Autowired
+    private AtributoRepository atributoRepository;
 
     // -------------------
     // ENDPOINTS PÚBLICOS
     // -------------------
+
     @GetMapping("/listado")
     public List<ProductoDTO> listarTodos() {
-        return productoservices.listarTodosDTO();
+        List<Productos> productos = productoservice.listarTodos();
+        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+
+        return productos.stream()
+                .map(producto -> productoservice.mapToDTO(producto, todasLasOfertas))
+                .toList();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductoDTO> buscarPorId(@PathVariable Long id) {
-        return productoservices.buscarPorId(id)
-                .map(producto -> ResponseEntity.ok(productoservices.mapToDTO(producto)))
-                .orElse(ResponseEntity.notFound().build());
+        Optional<Productos> productoOpt = productoservice.buscarPorId(id);
+        if (productoOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+        ProductoDTO dto = productoservice.mapToDTO(productoOpt.get(), todasLasOfertas);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/vender/{id}")
+    public ResponseEntity<ProductoDTO> venderProducto(
+            @PathVariable Long id,
+            @RequestParam int cantidad) {
+
+        Productos productoActualizado = productoservice.venderProducto(id, cantidad);
+        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+        ProductoDTO dto = productoservice.mapToDTO(productoActualizado, todasLasOfertas);
+
+        dto.setMensaje("Venta realizada, stock actualizado");
+        return ResponseEntity.ok(dto);
     }
 
     // -------------------
-    // ENDPOINTS ADMIN (solo /admin/productos/**)
+    // ENDPOINTS ADMIN
     // -------------------
+
     @PostMapping("/agregar")
-    public ResponseEntity<ProductoDTO> crearProducto(@RequestBody ProductoDTO request) {
-        // 1️⃣ Verificar si el producto ya existe por nombre
+    public ResponseEntity<ProductoDTO> agregarProducto(@RequestBody ProductoDTO request) {
+        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+
         Optional<Productos> productoExistente = productoRepository.findByNombre(request.getNombre());
 
         if (productoExistente.isPresent()) {
-            ProductoDTO dto = productoservices.mapToDTO(productoExistente.get());
-            dto.setMensaje("El producto ya está en la base de datos");
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(dto);
+            Productos producto = productoExistente.get();
+            int stockNuevo = request.getStock() != null ? request.getStock() : 0;
+            int totalNuevo = request.getTotalIngresado() != null ? request.getTotalIngresado() : stockNuevo;
+
+            producto.setStock(producto.getStock() + stockNuevo);
+            producto.setTotalIngresado(producto.getTotalIngresado() + totalNuevo);
+
+            productoRepository.save(producto);
+
+            ProductoDTO dto = productoservice.mapToDTO(producto, todasLasOfertas);
+            dto.setMensaje("Producto existente actualizado: stock y total ingresado sumados");
+            return ResponseEntity.ok(dto);
         }
 
-        // Crear producto normalmente
         Productos producto = new Productos();
         producto.setNombre(request.getNombre());
         producto.setDescripcion(request.getDescripcion());
         producto.setPrecio(request.getPrecio());
+        producto.setPrecioMayorista(request.getPrecioMayorista() != null ? request.getPrecioMayorista() : request.getPrecio());
 
-        // 🔥 ESTABLECER PRECIO MAYORISTA (usar precio regular si no se especifica)
-        BigDecimal precioMayorista = request.getPrecioMayorista() != null
-                ? request.getPrecioMayorista()
-                : request.getPrecio();
-        producto.setPrecioMayorista(precioMayorista);
-
-        producto.setStock(request.getStock());
-
-        // 🔥 ESTABLECER TOTAL INGRESADO (usar stock si no se especifica)
-        Integer totalIngresado = request.getTotalIngresado() != null
-                ? request.getTotalIngresado()
-                : request.getStock();
+        int stock = request.getStock() != null ? request.getStock() : 0;
+        int totalIngresado = request.getTotalIngresado() != null ? request.getTotalIngresado() : stock;
+        producto.setStock(stock);
         producto.setTotalIngresado(totalIngresado);
 
         producto.setImagenUrl(request.getImagenUrl());
-        producto.setActivo(request.getActivo());
-        producto.setFechaCreacion(LocalDateTime.now()); // 🔥 Establecer fecha de creación
+        producto.setActivo(request.getActivo() != null ? request.getActivo() : true);
+        producto.setFechaCreacion(LocalDateTime.now());
 
-        // Buscar categoría por nombre; si no existe, crearla automáticamente
+        // Categoría
         Categoria categoria = categoriaRepository.findByNombre(request.getCategoriaNombre())
                 .orElseGet(() -> {
                     Categoria nuevaCategoria = new Categoria();
@@ -104,29 +131,28 @@ public class ProductosController {
                     nuevaCategoria.setDescripcion("Creada automáticamente al agregar producto");
                     return categoriaRepository.save(nuevaCategoria);
                 });
-
         producto.setCategoria(categoria);
         producto.setIdCategoria(categoria.getId());
 
-        // Guardar producto para poder asignar relaciones
-        Productos productoGuardado = productoRepository.save(producto);
+        // Guardar producto antes de relaciones
+        producto = productoRepository.save(producto);
 
-        // Asignar fragancias
+        // Fragancias
         List<Fragancia> fragancias = new ArrayList<>();
-        for (String nombreFragancia : request.getFragancias()) {
-            Fragancia fragancia = fraganciaRepository.findByNombre(nombreFragancia)
-                    .orElseGet(() -> {
-                        Fragancia nueva = new Fragancia();
-                        nueva.setNombre(nombreFragancia);
-                        return fraganciaRepository.save(nueva);
-                    });
-            fragancias.add(fragancia);
+        if (request.getFragancias() != null) {
+            for (String nombreFragancia : request.getFragancias()) {
+                Fragancia fragancia = fraganciaRepository.findByNombre(nombreFragancia)
+                        .orElseGet(() -> {
+                            Fragancia nueva = new Fragancia();
+                            nueva.setNombre(nombreFragancia);
+                            return fraganciaRepository.save(nueva);
+                        });
+                fragancias.add(fragancia);
+            }
         }
         producto.setFragancias(fragancias);
 
-        // ========================
-        // Asignar atributos
-        // ========================
+        // Atributos
         if (request.getAtributos() != null) {
             for (ProductoDTO.ProductoAtributoDTO attrDTO : request.getAtributos()) {
                 String nombreAttr = attrDTO.getNombre();
@@ -145,28 +171,23 @@ public class ProductosController {
 
         productoRepository.save(producto);
 
-        ProductoDTO dto = productoservices.mapToDTO(producto);
+        ProductoDTO dto = productoservice.mapToDTO(producto, todasLasOfertas);
+        dto.setMensaje("Producto agregado correctamente");
         return ResponseEntity.ok(dto);
     }
-
-
 
     @PutMapping("/editar/{id}")
     public ResponseEntity<Productos> actualizarProducto(
             @PathVariable Long id,
             @RequestBody ProductoUpdateDTO dto) {
 
-        Productos actualizado = productoservices.actualizarProductos(
-                id,dto
-
-        );
-
+        Productos actualizado = productoservice.actualizarProductos(id, dto);
         return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
-        productoservices.eliminarProductos(id);
+        productoservice.eliminarProductos(id);
         return ResponseEntity.ok().build();
     }
 }

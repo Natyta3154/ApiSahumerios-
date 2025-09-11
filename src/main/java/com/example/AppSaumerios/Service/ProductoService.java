@@ -1,11 +1,12 @@
 package com.example.AppSaumerios.Service;
 
+import com.example.AppSaumerios.dto.OfertaDTO;
 import com.example.AppSaumerios.dto.ProductoDTO;
+import com.example.AppSaumerios.dto.ProductoOfertaDTO;
 import com.example.AppSaumerios.dto.ProductoUpdateDTO;
 import com.example.AppSaumerios.entity.*;
 import com.example.AppSaumerios.repository.AtributoRepository;
 import com.example.AppSaumerios.repository.CategoriaRepository;
-import com.example.AppSaumerios.repository.DescuentoRepository;
 import com.example.AppSaumerios.repository.FraganciaRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
 import jakarta.transaction.Transactional;
@@ -20,13 +21,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ProductosServices {
+public class ProductoService {
 
     @Autowired
     private ProductoRepository productoRepository;
-
-    @Autowired
-    private DescuentoRepository descuentoRepository;
 
     @Autowired
     private CategoriaRepository categoriaRepository;
@@ -36,6 +34,9 @@ public class ProductosServices {
 
     @Autowired
     private FraganciaRepository fraganciaRepository;
+
+    @Autowired
+    private OfertaService ofertaService; // <-- inyectamos OfertaService
 
     // =========================
     // CRUD BÁSICO
@@ -62,13 +63,9 @@ public class ProductosServices {
         Productos p = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
 
-        // Convertir el DTO a una entidad Productos para los campos básicos
         Productos productoActualizado = dto.toProductos();
-
-        // Validar stock y precio
         validarStockYPrecio(productoActualizado);
 
-        // Actualizar campos básicos
         if (productoActualizado.getNombre() != null) p.setNombre(productoActualizado.getNombre());
         if (productoActualizado.getDescripcion() != null) p.setDescripcion(productoActualizado.getDescripcion());
         if (productoActualizado.getPrecio() != null) p.setPrecio(productoActualizado.getPrecio());
@@ -85,7 +82,6 @@ public class ProductosServices {
             p.setTotalIngresado(p.getStock());
         }
 
-        // Actualizar categoría por nombre si se proporciona
         if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
             Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
                     .orElseGet(() -> {
@@ -97,7 +93,6 @@ public class ProductosServices {
             p.setIdCategoria(cat.getId());
         }
 
-        // Actualizar fragancias
         if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
             List<Fragancia> fraganciasActualizadas = dto.getFragancias().stream()
                     .map(nombre -> fraganciaRepository.findByNombre(nombre)
@@ -106,7 +101,6 @@ public class ProductosServices {
             p.setFragancias(fraganciasActualizadas);
         }
 
-        // Actualizar atributos
         if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
             p.getProductoAtributos().clear();
             for (ProductoUpdateDTO.ProductoAtributoDTO attrDTO : dto.getAtributos()) {
@@ -116,39 +110,13 @@ public class ProductosServices {
             }
         }
 
-        // Actualizar descuento
-        actualizarDescuento(p, dto.getPorcentajeDescuento(), dto.getFechaInicioDescuento(), dto.getFechaFinDescuento());
-
         return productoRepository.save(p);
     }
-
-
 
     private void validarStockYPrecio(Productos producto) {
         BigDecimal zero = BigDecimal.ZERO;
         if (producto.getStock() < 0 || producto.getPrecio().compareTo(zero) < 0) {
             throw new IllegalArgumentException("El stock y el precio no pueden ser negativos");
-        }
-    }
-
-    private void actualizarDescuento(Productos producto, BigDecimal porcentaje,
-                                     LocalDate inicio, LocalDate fin) {
-        Descuento descuentoActivo = producto.getDescuentoActivo();
-
-        if (descuentoActivo != null) {
-            if (porcentaje != null) descuentoActivo.setPorcentaje(porcentaje);
-            if (inicio != null) descuentoActivo.setFechaInicio(inicio);
-            if (fin != null) descuentoActivo.setFechaFin(fin);
-            descuentoRepository.save(descuentoActivo);
-        } else if (porcentaje != null) {
-            Descuento nuevo = new Descuento();
-            nuevo.setProducto(producto);
-            nuevo.setPorcentaje(porcentaje);
-            nuevo.setFechaInicio(inicio != null ? inicio : LocalDate.now());
-            nuevo.setFechaFin(fin != null ? fin : LocalDate.now().plusDays(30));
-            nuevo.setActivo(true);
-            producto.getDescuentos().add(nuevo);
-            descuentoRepository.save(nuevo);
         }
     }
 
@@ -160,64 +128,75 @@ public class ProductosServices {
     }
 
     // =========================
-    // DTO
-    // =========================
-
+// LISTAR TODOS LOS PRODUCTOS CON OFERTAS
+// =========================
     public List<ProductoDTO> listarTodosDTO() {
-        return productoRepository.findAll()
-                .stream()
-                .map(this::mapToDTO)
+        // 1. Obtener todos los productos
+        List<Productos> productos = productoRepository.findAll();
+
+        // 2. Obtener todas las ofertas activas
+        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal(); // devuelve List<ProductoOfertaDTO>
+
+        // 3. Mapear cada producto a DTO, pasando la lista de ofertas
+        return productos.stream()
+                .map(producto -> mapToDTO(producto, todasLasOfertas))
                 .toList();
     }
 
-    public ProductoDTO mapToDTO(Productos producto) {
+    // ==========================
+// Mapear Producto a ProductoDTO
+// ==========================
+    public ProductoDTO mapToDTO(Productos producto, List<ProductoOfertaDTO> todasLasOfertas) {
         ProductoDTO dto = new ProductoDTO();
         dto.setId(producto.getId());
         dto.setNombre(producto.getNombre());
         dto.setDescripcion(producto.getDescripcion());
         dto.setPrecio(producto.getPrecio());
-        dto.setPrecioMayorista(producto.getPrecioMayorista()); // 🔥 CORREGIDO
-        dto.setTotalIngresado(producto.getTotalIngresado());
+        dto.setPrecioMayorista(producto.getPrecioMayorista());
         dto.setStock(producto.getStock());
+        dto.setTotalIngresado(producto.getTotalIngresado());
         dto.setImagenUrl(producto.getImagenUrl());
         dto.setActivo(producto.getActivo());
+        dto.setCategoriaNombre(producto.getCategoria() != null ? producto.getCategoria().getNombre() : null);
 
-        // Categoría
-        if (producto.getCategoria() != null) {
-            dto.setCategoriaNombre(producto.getCategoria().getNombre());
-        }
-
-        // Descuento
-        Descuento descuento = producto.getDescuentoActivo();
-        if (descuento != null) {
-            dto.setPorcentajeDescuento(descuento.getPorcentaje());
-            dto.setFechaInicioDescuento(descuento.getFechaInicio());
-            dto.setFechaFinDescuento(descuento.getFechaFin());
-
-            BigDecimal rebaja = producto.getPrecio()
-                    .multiply(descuento.getPorcentaje())
-                    .divide(BigDecimal.valueOf(100));
-            dto.setPrecioFinal(producto.getPrecio().subtract(rebaja));
-        } else {
-            dto.setPrecioFinal(producto.getPrecio());
-        }
-
-        // Atributos
-        List<ProductoDTO.ProductoAtributoDTO> atributosDTO = producto.getProductoAtributos()
-                .stream()
+        // atributos
+        List<ProductoDTO.ProductoAtributoDTO> atributosDTO = producto.getProductoAtributos().stream()
                 .map(pa -> new ProductoDTO.ProductoAtributoDTO(pa.getAtributo().getNombre(), pa.getValor()))
                 .toList();
         dto.setAtributos(atributosDTO);
 
-        // Fragancias
-        List<String> fraganciasDTO = producto.getFragancias()
-                .stream()
+        // fragancias
+        List<String> fraganciasDTO = producto.getFragancias().stream()
                 .map(Fragancia::getNombre)
                 .toList();
         dto.setFragancias(fraganciasDTO);
 
+        // ofertas: solo la primera activa del producto
+        List<ProductoDTO.OfertaSimpleDTO> ofertasFiltradas = todasLasOfertas.stream()
+                .filter(of -> of.getId().equals(producto.getId())) // solo ofertas de este producto
+                .findFirst() // tomamos la primera
+                .map(of -> {
+                    ProductoDTO.OfertaSimpleDTO oDto = new ProductoDTO.OfertaSimpleDTO();
+                    oDto.setIdOferta(of.getId());
+                    oDto.setPrecio(of.getPrecioConDescuento());
+                    oDto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
+                    oDto.setTipoDescuento("PORCENTAJE"); // ajustar según lógica real
+                    oDto.setEstado(true);
+                    oDto.setFechaInicio(of.getFechaInicio()); // <--- ahora sí asigna
+                    oDto.setFechaFin(of.getFechaFin());
+                    return oDto;
+                })
+                .stream()
+                .toList();
+
+        dto.setOfertas(ofertasFiltradas);
+
         return dto;
     }
+
+
+
+
 
     // =========================
     // CREAR PRODUCTO COMPLETO DESDE DTO
@@ -226,25 +205,19 @@ public class ProductosServices {
     public Productos crearProductoDesdeDTO(ProductoDTO dto) {
         Productos producto = new Productos();
 
-        // ----------------------
-        // Campos básicos
-        // ----------------------
         producto.setNombre(dto.getNombre());
         producto.setDescripcion(dto.getDescripcion());
 
-        // Dentro de crearProductoDesdeDTO
         BigDecimal precioBase = dto.getPrecio() != null ? dto.getPrecio() : BigDecimal.ZERO;
         BigDecimal precioMayorista = dto.getPrecioMayorista() != null
                 ? dto.getPrecioMayorista()
                 : precioBase;
 
-// Asegurar que nunca sea null
         if (precioMayorista == null) {
             precioMayorista = BigDecimal.ZERO;
         }
 
         producto.setPrecioMayorista(precioMayorista.setScale(2, RoundingMode.HALF_UP));
-
 
         int stock = dto.getStock() != null ? dto.getStock() : 0;
         producto.setStock(stock);
@@ -256,9 +229,6 @@ public class ProductosServices {
         producto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
         producto.setFechaCreacion(LocalDateTime.now());
 
-        // ----------------------
-        // Categoría
-        // ----------------------
         if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
             Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
                     .orElseGet(() -> {
@@ -270,12 +240,8 @@ public class ProductosServices {
             producto.setIdCategoria(cat.getId());
         }
 
-        // Guardar producto primero para generar ID
         producto = productoRepository.save(producto);
 
-        // ----------------------
-        // Fragancias
-        // ----------------------
         if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
             List<Fragancia> fragancias = dto.getFragancias().stream()
                     .map(nombre -> fraganciaRepository.findByNombre(nombre)
@@ -284,9 +250,6 @@ public class ProductosServices {
             producto.setFragancias(fragancias);
         }
 
-        // ----------------------
-        // Atributos
-        // ----------------------
         if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
             Productos finalProducto = producto;
             Set<ProductoAtributo> productoAtributos = dto.getAtributos().stream()
@@ -299,20 +262,88 @@ public class ProductosServices {
             producto.setProductoAtributos(productoAtributos);
         }
 
-        // ----------------------
-        // Descuento
-        // ----------------------
-        if (dto.getPorcentajeDescuento() != null) {
-            Descuento descuento = new Descuento();
-            descuento.setProducto(producto);
-            descuento.setPorcentaje(dto.getPorcentajeDescuento());
-            descuento.setFechaInicio(dto.getFechaInicioDescuento() != null ? dto.getFechaInicioDescuento() : LocalDate.now());
-            descuento.setFechaFin(dto.getFechaFinDescuento() != null ? dto.getFechaFinDescuento() : LocalDate.now().plusDays(30));
-            descuento.setActivo(true);
-            producto.getDescuentos().add(descuento);
-            descuentoRepository.save(descuento);
+        return productoRepository.save(producto);
+    }
+
+    // =========================
+    // NUEVO MÉTODO: AGREGAR O SUMAR STOCK
+    // =========================
+    @Transactional
+    public Productos agregarOActualizarProducto(ProductoDTO dto) {
+        Optional<Productos> existenteOpt = productoRepository.findByNombre(dto.getNombre());
+
+        if (existenteOpt.isPresent()) {
+            Productos existente = existenteOpt.get();
+
+            int stockNuevo = (existente.getStock() != null ? existente.getStock() : 0)
+                    + (dto.getStock() != null ? dto.getStock() : 0);
+
+            int totalNuevo = (existente.getTotalIngresado() != null ? existente.getTotalIngresado() : 0)
+                    + (dto.getTotalIngresado() != null ? dto.getTotalIngresado() : 0);
+
+            existente.setStock(stockNuevo);
+            existente.setTotalIngresado(totalNuevo);
+
+            if (dto.getPrecio() != null) existente.setPrecio(dto.getPrecio());
+            if (dto.getPrecioMayorista() != null) existente.setPrecioMayorista(dto.getPrecioMayorista());
+            if (dto.getDescripcion() != null) existente.setDescripcion(dto.getDescripcion());
+            if (dto.getImagenUrl() != null) existente.setImagenUrl(dto.getImagenUrl());
+
+            // Categoría
+            if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
+                Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
+                        .orElseGet(() -> {
+                            Categoria nueva = new Categoria();
+                            nueva.setNombre(dto.getCategoriaNombre());
+                            return categoriaRepository.save(nueva);
+                        });
+                existente.setCategoria(cat);
+                existente.setIdCategoria(cat.getId());
+            }
+
+            // Fragancias
+            if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
+                List<Fragancia> fragancias = dto.getFragancias().stream()
+                        .map(nombre -> fraganciaRepository.findByNombre(nombre)
+                                .orElseGet(() -> fraganciaRepository.save(new Fragancia(nombre))))
+                        .toList();
+                existente.setFragancias(fragancias);
+            }
+
+            // Atributos
+            if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
+                existente.getProductoAtributos().clear();
+                for (ProductoDTO.ProductoAtributoDTO aDto : dto.getAtributos()) {
+                    Atributo atributo = atributoRepository.findByNombre(aDto.getNombre())
+                            .orElseGet(() -> atributoRepository.save(new Atributo(aDto.getNombre())));
+                    existente.addAtributo(atributo, aDto.getValor());
+                }
+            }
+
+            return productoRepository.save(existente);
         }
+
+        return crearProductoDesdeDTO(dto);
+    }
+
+    //recibe el ID del producto y la cantidad vendida, y actualiza
+    // solo el stock:
+    @Transactional
+    public Productos venderProducto(Long productoId, int cantidadVendida) {
+        Productos producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+        if (cantidadVendida <= 0) {
+            throw new IllegalArgumentException("La cantidad vendida debe ser mayor a cero");
+        }
+
+        if (producto.getStock() < cantidadVendida) {
+            throw new IllegalArgumentException("No hay suficiente stock para vender la cantidad solicitada");
+        }
+
+        producto.setStock(producto.getStock() - cantidadVendida);
 
         return productoRepository.save(producto);
     }
+
 }
