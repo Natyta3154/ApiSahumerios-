@@ -206,7 +206,7 @@ public class JwtFilter extends OncePerRequestFilter {
         // Rutas públicas
         return path.startsWith("/productos/listado") ||
                 path.matches("/productos/.*") ||
-                path.startsWith("/api/ofertas/listar") ||
+                path.equals("/api/ofertas/listar") || path.startsWith("/api/ofertas/listar/") ||
                 path.startsWith("/api/ofertas/con-precio") ||
                 path.startsWith("/usuarios/registrar") ||
                 path.startsWith("/usuarios/login") ||
