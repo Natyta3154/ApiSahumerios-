@@ -62,7 +62,7 @@ public class UsuarioController {
     }
 
     // Crear nuevo usuario (solo admin)
-    @PostMapping("/agregarUsuario")
+    @PostMapping("/agregarUser")
     public ResponseEntity<?> agregarUsuario(Authentication authentication,
                                             @RequestBody Usuarios nuevoUsuario) {
         if (!authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
@@ -77,7 +77,7 @@ public class UsuarioController {
     }
 
     // Actualizar usuario (solo admin)
-    @PutMapping("/{id}")
+    @PutMapping("/editarUser/{id}")
     public ResponseEntity<?> actualizarUsuario(Authentication authentication,
                                                @PathVariable Long id,
                                                @RequestBody Usuarios usuarioActualizado) {
@@ -93,7 +93,7 @@ public class UsuarioController {
     }
 
     // Eliminar usuario (solo admin)
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/eliminarUser/{id}")
     public ResponseEntity<?> eliminarUsuario(Authentication authentication,
                                              @PathVariable Long id) {
         if (!authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {

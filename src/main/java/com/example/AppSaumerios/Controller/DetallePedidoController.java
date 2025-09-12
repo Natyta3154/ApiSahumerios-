@@ -27,7 +27,7 @@ public class DetallePedidoController {
     private JwtUtil jwtUtil;
 
     // Obtener todos los detalles de un pedido (validando que el pedido pertenezca al usuario)
-    @GetMapping("/pedido/{pedidoId}")
+    @GetMapping("/{pedidoId}")
     public ResponseEntity<?> obtenerDetallesPorPedido(@PathVariable Long pedidoId,
                                                       HttpServletRequest request) {
         try {

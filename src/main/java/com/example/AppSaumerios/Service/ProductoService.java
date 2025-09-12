@@ -159,6 +159,13 @@ public class ProductoService {
         dto.setActivo(producto.getActivo());
         dto.setCategoriaNombre(producto.getCategoria() != null ? producto.getCategoria().getNombre() : null);
 
+        // ======================
+        // Forzar carga de relaciones
+        // ======================
+        producto.getProductoAtributos().size(); // fuerza carga de atributos
+        producto.getFragancias().size();        // fuerza carga de fragancias
+
+
         // atributos
         List<ProductoDTO.ProductoAtributoDTO> atributosDTO = producto.getProductoAtributos().stream()
                 .map(pa -> new ProductoDTO.ProductoAtributoDTO(pa.getAtributo().getNombre(), pa.getValor()))
@@ -275,15 +282,15 @@ public class ProductoService {
         if (existenteOpt.isPresent()) {
             Productos existente = existenteOpt.get();
 
+            // Actualizar stock y total ingresado
             int stockNuevo = (existente.getStock() != null ? existente.getStock() : 0)
                     + (dto.getStock() != null ? dto.getStock() : 0);
-
             int totalNuevo = (existente.getTotalIngresado() != null ? existente.getTotalIngresado() : 0)
                     + (dto.getTotalIngresado() != null ? dto.getTotalIngresado() : 0);
-
             existente.setStock(stockNuevo);
             existente.setTotalIngresado(totalNuevo);
 
+            // Actualizar datos básicos
             if (dto.getPrecio() != null) existente.setPrecio(dto.getPrecio());
             if (dto.getPrecioMayorista() != null) existente.setPrecioMayorista(dto.getPrecioMayorista());
             if (dto.getDescripcion() != null) existente.setDescripcion(dto.getDescripcion());
@@ -301,23 +308,44 @@ public class ProductoService {
                 existente.setIdCategoria(cat.getId());
             }
 
-            // Fragancias
+            // Fragancias: agregar nuevas sin eliminar existentes
             if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
-                List<Fragancia> fragancias = dto.getFragancias().stream()
+                Set<String> nombresExistentes = existente.getFragancias().stream()
+                        .map(Fragancia::getNombre)
+                        .collect(Collectors.toSet());
+
+                List<Fragancia> fraganciasActualizadas = dto.getFragancias().stream()
+                        .filter(nombre -> !nombresExistentes.contains(nombre)) // solo nuevas
                         .map(nombre -> fraganciaRepository.findByNombre(nombre)
                                 .orElseGet(() -> fraganciaRepository.save(new Fragancia(nombre))))
                         .toList();
-                existente.setFragancias(fragancias);
+
+                existente.getFragancias().addAll(fraganciasActualizadas);
             }
 
-            // Atributos
-            if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
-                existente.getProductoAtributos().clear();
+            // Atributos: actualizar individualmente
+            if (dto.getAtributos() != null) {
+                Map<String, ProductoAtributo> actuales = existente.getProductoAtributos().stream()
+                        .collect(Collectors.toMap(pa -> pa.getAtributo().getNombre(), pa -> pa));
+
+                Set<ProductoAtributo> nuevosAtributos = new HashSet<>();
+
                 for (ProductoDTO.ProductoAtributoDTO aDto : dto.getAtributos()) {
                     Atributo atributo = atributoRepository.findByNombre(aDto.getNombre())
                             .orElseGet(() -> atributoRepository.save(new Atributo(aDto.getNombre())));
-                    existente.addAtributo(atributo, aDto.getValor());
+
+                    if (actuales.containsKey(aDto.getNombre())) {
+                        // actualizar valor existente
+                        actuales.get(aDto.getNombre()).setValor(aDto.getValor());
+                        nuevosAtributos.add(actuales.get(aDto.getNombre()));
+                    } else {
+                        // agregar nuevo atributo
+                        ProductoAtributo pa = new ProductoAtributo(existente, atributo, aDto.getValor());
+                        nuevosAtributos.add(pa);
+                    }
                 }
+
+                existente.setProductoAtributos(nuevosAtributos);
             }
 
             return productoRepository.save(existente);
@@ -325,6 +353,7 @@ public class ProductoService {
 
         return crearProductoDesdeDTO(dto);
     }
+
 
     //recibe el ID del producto y la cantidad vendida, y actualiza
     // solo el stock:
