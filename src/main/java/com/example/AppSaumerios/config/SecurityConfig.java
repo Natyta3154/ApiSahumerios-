@@ -70,10 +70,35 @@ public class SecurityConfig {
                         .requestMatchers("/usuarios/registrar", "/usuarios/login").permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-                        .requestMatchers("/productos/listado", "/productos/*").permitAll()
-                        .requestMatchers("/productos/agregarProductos",
+                        .requestMatchers(
+                                "/productos/listado",
+                                "/productos/*",
+                                "/api/oferta/listar/*",
+                                "/api/ofertas/con-precio",
+                                "/usuarios/registrar",
+                                "/usuarios/login",
+                                "/atributos/listado",
+                                "/detallePedidos/pedido/**",
+                                "/detallePedidos/*")
+                        .permitAll()
+                        .requestMatchers(
+                                "/pedidos/relizarPedidos",
+                                "/pedidos")
+                        .hasRole("USER")
+                        .requestMatchers("/pedidos/*").hasRole("USER") // ver su propio pedido
+                        .requestMatchers(
+                                "/usuarios/**",
+                                "/productos/agregarProductos",
                                 "/productos/editaProducto/**",
-                                "/productos/eliminar/**").hasAuthority("ROLE_ADMIN")
+                                "/productos/eliminar/**",
+                                "/api/*",
+                                "/api/ofertas/editar/*",
+                                "/api/ofertas/crearOferta",
+                                "/api/ofertas/eliminar/*",
+                                "/pedidos/admin/**",
+                                "/atributos/**",
+                                "/detallePedidos/admin/**")
+                        .hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
