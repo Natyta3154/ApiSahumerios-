@@ -73,7 +73,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/productos/listado",
                                 "/productos/*",
-                                "/api/oferta/listar/*",
+                                "/api/ofertas/listar/*",
                                 "/api/ofertas/con-precio",
                                 "/usuarios/registrar",
                                 "/usuarios/login",
