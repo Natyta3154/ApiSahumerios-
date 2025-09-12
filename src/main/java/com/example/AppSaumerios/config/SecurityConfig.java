@@ -78,7 +78,7 @@ public class SecurityConfig {
                                 "/usuarios/registrar",
                                 "/usuarios/login",
                                 "/atributos/listado",
-                                "/detallePedidos/pedido/**",
+                                "/detallePedidos/{pedidoId}",
                                 "/detallePedidos/*")
                         .permitAll()
                         .requestMatchers(
@@ -87,17 +87,26 @@ public class SecurityConfig {
                         .hasRole("USER")
                         .requestMatchers("/pedidos/*").hasRole("USER") // ver su propio pedido
                         .requestMatchers(
-                                "/usuarios/**",
-                                "/productos/agregarProductos",
-                                "/productos/editaProducto/**",
-                                "/productos/eliminar/**",
-                                "/api/*",
-                                "/api/ofertas/editar/*",
+                                "/usuarios",
+                                "/usuarios/listaDeUser",
+                                "/usuarios//{id}",
+                                "/usuarios/agregarUser",
+                                "/usuarios/editarUser/{id}",
+                                "/usuarios/eliminarUser/{id}",
+                                "/productos//agregar",
+                                "/productos/editar/{id}",
+                                "/productos/eliminar/{id}",
+                                "/api/ofertas",
+                                "/api/ofertas/editar/{id}",
                                 "/api/ofertas/crearOferta",
-                                "/api/ofertas/eliminar/*",
-                                "/pedidos/admin/**",
-                                "/atributos/**",
-                                "/detallePedidos/admin/**")
+                                "/api/ofertas/eliminar/{id}",
+                                "/pedidos/admin",
+                                "/pedidos//{id}/estado",
+                                "/atributos",
+                                "/atributos/agregar",
+                                "/atributos/editar/{id}",
+                                "atributos/eliminar/{id}",
+                                "/detallePedidos/admin/{id}")
                         .hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )

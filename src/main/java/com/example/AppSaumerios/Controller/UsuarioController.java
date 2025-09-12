@@ -36,7 +36,7 @@ public class UsuarioController {
     // ===================== ADMIN =====================
 
     // Obtener todos los usuarios (solo admin)
-    @GetMapping
+    @GetMapping("/listaDeUser")
     public ResponseEntity<List<Usuarios>> obtenerUsuarios(Authentication authentication) {
         if (authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
             return ResponseEntity.ok(usuarioService.obtenerUsuarios());
