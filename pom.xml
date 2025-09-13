@@ -132,6 +132,13 @@
 
 	</dependencies>
 	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+			</resource>
+		</resources>
+
 		<plugins>
 			<!-- Spring Boot Plugin -->
 			<plugin>
@@ -154,5 +161,6 @@
 			</plugin>
 		</plugins>
 	</build>
+
 
 </project>
