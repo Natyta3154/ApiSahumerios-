@@ -4,13 +4,20 @@ import com.example.AppSaumerios.Service.OfertaService;
 import com.example.AppSaumerios.dto.OfertaDTO;
 import com.example.AppSaumerios.dto.ProductoOfertaDTO;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/ofertas")
-@CrossOrigin(origins = "http://localhost:9002")
+@CrossOrigin(origins = {
+        "http://localhost:9002",
+        "http://localhost:3000",
+        "https://api-sahumerios.vercel.app",
+        "https://hernan.alwaysdata.net"
+})
 public class OfertaController {
 
     private final OfertaService ofertaService;
@@ -20,7 +27,7 @@ public class OfertaController {
     }
 
     // =========================
-    // Listar todas las ofertas (DTO)
+    // Listar todas las ofertas (DTO) - Público
     // =========================
     @GetMapping("/listar")
     public ResponseEntity<List<OfertaDTO>> listarOfertas() {
@@ -29,7 +36,7 @@ public class OfertaController {
     }
 
     // =========================
-    // Listar productos con precio final aplicado
+    // Listar productos con precio final aplicado - Público
     // =========================
     @GetMapping("/con-precio")
     public ResponseEntity<List<ProductoOfertaDTO>> listarOfertasConPrecioFinal() {
@@ -38,7 +45,7 @@ public class OfertaController {
     }
 
     // =========================
-    // Buscar oferta por ID
+    // Buscar oferta por ID - Público
     // =========================
     @GetMapping("/{id}")
     public ResponseEntity<OfertaDTO> buscarPorId(@PathVariable Long id) {
@@ -50,24 +57,26 @@ public class OfertaController {
     }
 
     // =========================
-    // Crear nueva oferta
+    // Crear nueva oferta - Solo Admin
     // =========================
     @PostMapping("/crearOferta")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<OfertaDTO> crearOferta(@RequestBody OfertaDTO dto) {
         return ResponseEntity.ok(ofertaService.crearOfertaDTO(dto));
     }
 
     // =========================
-    // Actualizar oferta existente
+    // Actualizar oferta existente - Solo Admin
     // =========================
     @PutMapping("/editar/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<OfertaDTO> actualizar(@PathVariable Long id, @RequestBody OfertaDTO dto) {
         OfertaDTO ofertaExistente = ofertaService.buscarPorIdDTO(id);
         if (ofertaExistente == null) {
             return ResponseEntity.notFound().build();
         }
 
-        // Mantenemos el producto y el ID de la oferta
+        // Mantener producto y ID de la oferta intactos
         dto.setProductoId(ofertaExistente.getProductoId());
         dto.setIdOferta(id);
 
@@ -75,15 +84,18 @@ public class OfertaController {
     }
 
     // =========================
-    // Eliminar oferta
+    // Eliminar oferta - Solo Admin
     // =========================
     @DeleteMapping("/eliminar/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        if (ofertaService.buscarPorIdDTO(id) != null) {
+        OfertaDTO ofertaExistente = ofertaService.buscarPorIdDTO(id);
+        if (ofertaExistente != null) {
             ofertaService.eliminar(id);
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
     }
 }
+
 

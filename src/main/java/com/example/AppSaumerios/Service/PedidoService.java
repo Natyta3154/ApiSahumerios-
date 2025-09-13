@@ -6,27 +6,16 @@ import com.example.AppSaumerios.repository.DetallePedidoRepository;
 import com.example.AppSaumerios.repository.PedidoRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
 import com.example.AppSaumerios.repository.UsuarioRepository;
-import com.example.AppSaumerios.Service.PedidoService;
-import com.example.AppSaumerios.util.JwtUtil;
 import jakarta.persistence.EntityManager;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
-
 
 @Service
 @Transactional
@@ -43,9 +32,13 @@ public class PedidoService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
     @Autowired
     private EntityManager entityManager;
 
+    // =========================
+    // Crear pedido con detalles
+    // =========================
     public Pedidos crearPedido(CrearPedidoRequestDTO crearPedidoRequestDTO) {
         // Validar y obtener usuario
         Usuarios usuario = usuarioRepository.findById(crearPedidoRequestDTO.getUsuarioId())
@@ -84,72 +77,75 @@ public class PedidoService {
             detalle.setProducto(producto);
             detalle.setCantidad(item.getCantidad());
             detalle.setSubtotal(subtotal);
-            detalle.setPedido(pedido); // 👈 importante: relaciono el detalle con el pedido
+            detalle.setPedido(pedido); // Relación con pedido
 
             detalles.add(detalle);
         }
 
         // Setear total y lista de detalles
         pedido.setTotal(total);
-        pedido.setDetalles(detalles); // 👈 clave: el pedido ahora "conoce" sus detalles
+        pedido.setDetalles(detalles);
 
-        // Guardar pedido con sus detalles
+        // Guardar pedido con detalles
         Pedidos pedidoGuardado = pedidoRepository.save(pedido);
 
-        // ⚠️ Si tu entidad Pedidos tiene cascade = CascadeType.ALL,
-        // no hace falta este bucle, ya guarda todo junto.
+        // Guardar detalles si no está configurado cascade = ALL
         for (DetallePedido detalle : detalles) {
             detalle.setPedido(pedidoGuardado);
             detallePedidoRepository.save(detalle);
         }
 
-        // Refrescar detalles para devolverlos en el JSON
         pedidoGuardado.setDetalles(detalles);
-
         return pedidoGuardado;
     }
 
-
+    // =========================
+    // Obtener pedido por ID y usuario
+    // =========================
     public Pedidos obtenerPedidoPorIdYUsuario(Long pedidoId, Long usuarioId) {
         Pedidos pedido = pedidoRepository.findByIdAndUsuarioId(pedidoId, usuarioId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado para el usuario"));
 
-        // ✅ Forzar carga de detalles con JOIN FETCH (más eficiente)
+        // Forzar carga de detalles con JOIN FETCH
         String jpql = "SELECT p FROM Pedidos p LEFT JOIN FETCH p.detalles d LEFT JOIN FETCH d.producto WHERE p.id = :pedidoId AND p.usuario.id = :usuarioId";
-
         try {
-           ;
             Pedidos pedidoCompleto = entityManager.createQuery(jpql, Pedidos.class)
                     .setParameter("pedidoId", pedidoId)
                     .setParameter("usuarioId", usuarioId)
                     .getSingleResult();
             return pedidoCompleto;
         } catch (Exception e) {
-            // Fallback al método original
             Hibernate.initialize(pedido.getDetalles());
             return pedido;
         }
     }
 
+    // =========================
+    // Obtener pedidos por usuario
+    // =========================
     public List<Pedidos> obtenerPedidosPorUsuario(Long usuarioId) {
-        // ✅ Usar JOIN FETCH para cargar todo en una query
         String jpql = "SELECT DISTINCT p FROM Pedidos p LEFT JOIN FETCH p.detalles d LEFT JOIN FETCH d.producto WHERE p.usuario.id = :usuarioId ORDER BY p.fecha DESC";
-
         return entityManager.createQuery(jpql, Pedidos.class)
                 .setParameter("usuarioId", usuarioId)
                 .getResultList();
     }
 
+    // =========================
+    // Obtener todos los pedidos
+    // =========================
     public List<Pedidos> obtenerTodosPedidos() {
         return pedidoRepository.findAllByOrderByFechaDesc();
     }
+
+    // =========================
+    // Actualizar estado de pedido
+    // =========================
     public Pedidos actualizarEstado(Long pedidoId, String estadoStr) {
         Pedidos pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
-        // Convertir String a Enum
         EstadoPedido estado = EstadoPedido.valueOf(estadoStr.toUpperCase());
-        pedido.setEstado(estado); // ✅ Correcto
+        pedido.setEstado(estado);
         return pedidoRepository.save(pedido);
     }
 
@@ -158,6 +154,26 @@ public class PedidoService {
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
     }
 
+    // =========================
+    // Convertir DetallePedido a DTO
+    // =========================
+    public DetallePedidoDTO convertirADTO(DetallePedido detalle) {
+        if (detalle == null) return null;
 
+        DetallePedidoDTO dto = new DetallePedidoDTO();
+        dto.setPedidoId(detalle.getPedido() != null ? detalle.getPedido().getId() : null);
+        dto.setProductoId(detalle.getProducto() != null ? detalle.getProducto().getId() : null);
+        dto.setCantidad(detalle.getCantidad());
+        dto.setSubtotal(detalle.getSubtotal());
+        return dto;
+    }
 
+    // =========================
+    // Convertir lista de DetallePedido a lista de DTOs
+    // =========================
+    public List<DetallePedidoDTO> convertirListaADTO(List<DetallePedido> detalles) {
+        return detalles.stream()
+                .map(this::convertirADTO)
+                .collect(Collectors.toList());
+    }
 }

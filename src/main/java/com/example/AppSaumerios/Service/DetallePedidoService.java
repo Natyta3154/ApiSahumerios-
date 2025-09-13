@@ -1,12 +1,15 @@
 package com.example.AppSaumerios.Service;
 
+import com.example.AppSaumerios.dto.DetallePedidoRequestDTO;
 import com.example.AppSaumerios.entity.DetallePedido;
+import com.example.AppSaumerios.entity.Productos;
 import com.example.AppSaumerios.repository.DetallePedidoRepository;
+import com.example.AppSaumerios.repository.ProductoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class DetallePedidoService {
@@ -15,45 +18,73 @@ public class DetallePedidoService {
     private DetallePedidoRepository detallePedidoRepository;
 
     @Autowired
-    private PedidoService pedidoService;
+    private ProductoRepository productoRepository;
 
-    // Obtener detalles por ID de pedido
-    public List<DetallePedido> obtenerDetallesPorPedidoId(Long pedidoId) {
-        return detallePedidoRepository.findByPedidoId(pedidoId);
-    }
+    // Crear detalle de pedido
+    public DetallePedido crearDetalle(Long usuarioId, DetallePedidoRequestDTO dto) {
+        Productos producto = productoRepository.findById(dto.getProductoId())
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + dto.getProductoId()));
 
-    // Obtener detalle por ID y validar que pertenece al usuario - MÉTODO NUEVO
-    public DetallePedido obtenerDetallePorIdYUsuario(Long detalleId, Long usuarioId) {
-        Optional<DetallePedido> detalleOpt = detallePedidoRepository.findById(detalleId);
-
-        if (detalleOpt.isPresent()) {
-            DetallePedido detalle = detalleOpt.get();
-            // Verificar que el pedido pertenece al usuario
-            // Esto lanzará excepción si el pedido no pertenece al usuario
-            pedidoService.obtenerPedidoPorIdYUsuario(detalle.getPedido().getId(), usuarioId);
-            return detalle;
+        if (producto.getStock() < dto.getCantidad()) {
+            throw new RuntimeException("Stock insuficiente para: " + producto.getNombre());
         }
-        throw new RuntimeException("Detalle de pedido no encontrado");
+
+        // Descontar stock
+        producto.setStock(producto.getStock() - dto.getCantidad());
+        productoRepository.save(producto);
+
+        DetallePedido detalle = new DetallePedido();
+        detalle.setProducto(producto);
+        detalle.setCantidad(dto.getCantidad());
+        detalle.setSubtotal(producto.getPrecio().multiply(BigDecimal.valueOf(dto.getCantidad())));
+
+        return detallePedidoRepository.save(detalle);
     }
 
-    // Obtener detalle solo por ID (sin validación de usuario)
-    public DetallePedido obtenerDetallePorId(Long detalleId) {
-        return detallePedidoRepository.findById(detalleId)
-                .orElseThrow(() -> new RuntimeException("Detalle de pedido no encontrado"));
-    }
+    // Actualizar detalle de pedido
+    public DetallePedido actualizarDetalle(DetallePedido detalle, DetallePedidoRequestDTO dto) {
+        Productos producto = detalle.getProducto();
 
-    // Guardar detalle de pedido
-    public DetallePedido guardarDetalle(DetallePedido detallePedido) {
-        return detallePedidoRepository.save(detallePedido);
+        int diferencia = dto.getCantidad() - detalle.getCantidad();
+
+        if (diferencia > 0 && producto.getStock() < diferencia) {
+            throw new RuntimeException("Stock insuficiente para: " + producto.getNombre());
+        }
+
+        // Ajustar stock
+        producto.setStock(producto.getStock() - diferencia);
+        productoRepository.save(producto);
+
+        // Actualizar detalle
+        detalle.setCantidad(dto.getCantidad());
+        detalle.setSubtotal(producto.getPrecio().multiply(BigDecimal.valueOf(dto.getCantidad())));
+
+        return detallePedidoRepository.save(detalle);
     }
 
     // Eliminar detalle de pedido
-    public void eliminarDetalle(Long detalleId) {
-        detallePedidoRepository.deleteById(detalleId);
+    public void eliminarDetalle(DetallePedido detalle) {
+        Productos producto = detalle.getProducto();
+        producto.setStock(producto.getStock() + detalle.getCantidad());
+        productoRepository.save(producto);
+
+        detallePedidoRepository.delete(detalle);
     }
 
-    // Obtener todos los detalles
-    public List<DetallePedido> obtenerTodosDetalles() {
-        return detallePedidoRepository.findAll();
+    // Obtener detalle por ID (usuario)
+    public DetallePedido obtenerDetallePorIdYUsuario(Long detalleId, Long usuarioId) {
+        return detallePedidoRepository.findById(detalleId)
+                .filter(d -> d.getPedido().getUsuario().getId().equals(usuarioId))
+                .orElse(null);
+    }
+
+    // Obtener detalle por ID (admin)
+    public DetallePedido obtenerDetallePorId(Long detalleId) {
+        return detallePedidoRepository.findById(detalleId).orElse(null);
+    }
+
+    // Obtener detalles de un pedido
+    public List<DetallePedido> obtenerDetallesPorPedidoId(Long pedidoId) {
+        return detallePedidoRepository.findByPedidoId(pedidoId);
     }
 }
