@@ -59,29 +59,22 @@ public class ProductoService {
         return productoRepository.save(productos);
     }
 
+    @Transactional
     public Productos actualizarProductos(Long id, ProductoUpdateDTO dto) {
         Productos p = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
 
-        Productos productoActualizado = dto.toProductos();
-        validarStockYPrecio(productoActualizado);
+        // Campos básicos
+        if (dto.getNombre() != null) p.setNombre(dto.getNombre());
+        if (dto.getDescripcion() != null) p.setDescripcion(dto.getDescripcion());
+        if (dto.getPrecio() != null) p.setPrecio(dto.getPrecio());
+        if (dto.getPrecioMayorista() != null) p.setPrecioMayorista(dto.getPrecioMayorista());
+        if (dto.getStock() != null) p.setStock(dto.getStock());
+        if (dto.getActivo() != null) p.setActivo(dto.getActivo());
+        if (dto.getImagenUrl() != null) p.setImagenUrl(dto.getImagenUrl());
+        if (dto.getTotalIngresado() != null) p.setTotalIngresado(dto.getTotalIngresado());
 
-        if (productoActualizado.getNombre() != null) p.setNombre(productoActualizado.getNombre());
-        if (productoActualizado.getDescripcion() != null) p.setDescripcion(productoActualizado.getDescripcion());
-        if (productoActualizado.getPrecio() != null) p.setPrecio(productoActualizado.getPrecio());
-        if (productoActualizado.getStock() >= 0) p.setStock(productoActualizado.getStock());
-        if (productoActualizado.getActivo() != null) p.setActivo(productoActualizado.getActivo());
-        if (productoActualizado.getImagenUrl() != null) p.setImagenUrl(productoActualizado.getImagenUrl());
-        if (productoActualizado.getIdCategoria() != null) p.setIdCategoria(productoActualizado.getIdCategoria());
-        if (productoActualizado.getPrecioMayorista() != null)
-            p.setPrecioMayorista(productoActualizado.getPrecioMayorista());
-
-        if (productoActualizado.getTotalIngresado() != null) {
-            p.setTotalIngresado(productoActualizado.getTotalIngresado());
-        } else if (p.getTotalIngresado() == null) {
-            p.setTotalIngresado(p.getStock());
-        }
-
+        // Categoría
         if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
             Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
                     .orElseGet(() -> {
@@ -93,14 +86,16 @@ public class ProductoService {
             p.setIdCategoria(cat.getId());
         }
 
+        // Fragancias
         if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
-            List<Fragancia> fraganciasActualizadas = dto.getFragancias().stream()
+            List<Fragancia> fragancias = dto.getFragancias().stream()
                     .map(nombre -> fraganciaRepository.findByNombre(nombre)
                             .orElseGet(() -> fraganciaRepository.save(new Fragancia(nombre))))
-                    .collect(Collectors.toList());
-            p.setFragancias(fraganciasActualizadas);
+                    .toList();
+            p.setFragancias(fragancias);
         }
 
+        // Atributos
         if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
             p.getProductoAtributos().clear();
             for (ProductoUpdateDTO.ProductoAtributoDTO attrDTO : dto.getAtributos()) {
@@ -110,8 +105,23 @@ public class ProductoService {
             }
         }
 
+        // Descuento / ofertas (opcional, si quieres manejarlo en este método)
+        if (dto.getPorcentajeDescuento() != null) {
+            Ofertas oferta = new Ofertas();
+            oferta.setValorDescuento(dto.getPorcentajeDescuento());
+            oferta.setTipoDescuento("PORCENTAJE"); // o manejar según tu lógica
+            oferta.setFechaInicio(dto.getFechaInicioDescuento() != null ? dto.getFechaInicioDescuento() : LocalDate.now());
+            oferta.setFechaFin(dto.getFechaFinDescuento() != null ? dto.getFechaFinDescuento() : LocalDate.now().plusDays(30));
+            oferta.setEstado(true);
+            oferta.setProducto(p);
+            p.getOfertas().add(oferta);
+        }
+
+        validarStockYPrecio(p);
+
         return productoRepository.save(p);
     }
+
 
     private void validarStockYPrecio(Productos producto) {
         BigDecimal zero = BigDecimal.ZERO;

@@ -204,13 +204,14 @@ public class JwtFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         // Rutas públicas
-        return path.startsWith("/productos/listado") ||
-                path.matches("/productos/.*") ||
-                path.equals("/api/ofertas/listar") || path.startsWith("/api/ofertas/listar/") ||
+        // Solo rutas realmente públicas
+        return path.equals("/productos/listado") ||  // listado público
+                path.equals("/api/ofertas/listar") ||
+                path.startsWith("/api/ofertas/listar/") ||
                 path.startsWith("/api/ofertas/con-precio") ||
-                path.startsWith("/usuarios/registrar") ||
-                path.startsWith("/usuarios/login") ||
-                path.startsWith("/atributos/listado") ||
+                path.equals("/usuarios/registrar") ||
+                path.equals("/usuarios/login") ||
+                path.equals("/atributos/listado") ||
                 path.startsWith("/detallePedidos/pedido") ||
                 path.matches("/detallePedidos/.*") ||
                 path.equals("/error") ||

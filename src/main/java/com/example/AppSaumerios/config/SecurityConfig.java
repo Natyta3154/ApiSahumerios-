@@ -89,11 +89,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/usuarios",
                                 "/usuarios/listaDeUser",
-                                "/usuarios//{id}",
+                                "/usuarios/{id}",
                                 "/usuarios/agregarUser",
                                 "/usuarios/editarUser/{id}",
                                 "/usuarios/eliminarUser/{id}",
-                                "/productos//agregar",
+                                "/productos/agregar",
                                 "/productos/editar/{id}",
                                 "/productos/eliminar/{id}",
                                 "/api/ofertas",
@@ -101,11 +101,11 @@ public class SecurityConfig {
                                 "/api/ofertas/crearOferta",
                                 "/api/ofertas/eliminar/{id}",
                                 "/pedidos/admin",
-                                "/pedidos//{id}/estado",
+                                "/pedidos/{id}/estado",
                                 "/atributos",
                                 "/atributos/agregar",
                                 "/atributos/editar/{id}",
-                                "atributos/eliminar/{id}",
+                                "/atributos/eliminar/{id}",
                                 "/detallePedidos/admin/{id}")
                         .hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()

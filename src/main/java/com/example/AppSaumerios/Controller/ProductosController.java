@@ -13,6 +13,7 @@ import com.example.AppSaumerios.repository.AtributoRepository;
 import com.example.AppSaumerios.repository.CategoriaRepository;
 import com.example.AppSaumerios.repository.FraganciaRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -175,15 +176,32 @@ public class ProductosController {
         dto.setMensaje("Producto agregado correctamente");
         return ResponseEntity.ok(dto);
     }
-
     @PutMapping("/editar/{id}")
-    public ResponseEntity<Productos> actualizarProducto(
+    public ResponseEntity<ProductoDTO> actualizarProducto(
             @PathVariable Long id,
             @RequestBody ProductoUpdateDTO dto) {
+        // LOG PARA DEBUG
+        System.out.println("DTO que se va a devolver al frontend:");
+        ProductoDTO dtoResponse = null;
+        System.out.println(dtoResponse);
 
+
+        // 1. Actualiza el producto usando tu service
         Productos actualizado = productoservice.actualizarProductos(id, dto);
-        return ResponseEntity.ok(actualizado);
+
+        // 2. Obtiene todas las ofertas activas para mapear correctamente
+        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+
+        // 3. Mapea la entidad a DTO para retornar toda la info actualizada
+        dtoResponse = productoservice.mapToDTO(actualizado, todasLasOfertas);
+
+        // 4. Devuelve DTO completo
+        return ResponseEntity.ok(dtoResponse);
     }
+
+
+
+
 
     @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
