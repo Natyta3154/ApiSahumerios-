@@ -53,10 +53,17 @@ public class UsuarioService {
             throw new IllegalArgumentException("La contraseña no puede estar vacía");
         }
 
-        // Si no tiene rol, se asigna "USER"
-        //if (usuario.getRol() == null || usuario.getRol().isBlank()) {
-           // usuario.setRol("USER");
-       // }
+        // Normalizar el rol: quitar "ROLE_" si está presente y convertir a mayúsculas
+        String rol = usuario.getRol();
+        if (rol != null && !rol.isBlank()) {
+            if (rol.startsWith("ROLE_")) {
+                rol = rol.substring(5); // quita "ROLE_"
+            }
+            rol = rol.toUpperCase();
+        } else {
+            rol = "USER"; // valor por defecto
+        }
+        usuario.setRol(rol);
 
         // Codificar la contraseña antes de guardar
         usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
@@ -72,10 +79,20 @@ public class UsuarioService {
                     if (usuarioActualizado.getPassword() != null && !usuarioActualizado.getPassword().isBlank()) {
                         usuario.setPassword(passwordEncoder.encode(usuarioActualizado.getPassword()));
                     }
-                    usuario.setRol(usuarioActualizado.getRol());
+                    // Normalizar el rol
+                    String rol = usuarioActualizado.getRol();
+                    if (rol != null && !rol.isBlank()) {
+                        if (rol.startsWith("ROLE_")) {
+                            rol = rol.substring(5);
+                        }
+                        rol = rol.toUpperCase();
+                    } else {
+                        rol = "USER";
+                    }
+                    usuario.setRol(rol);
                     return usuarioRepository.save(usuario);
                 })
-                .orElseThrow(() -> new IllegalArgumentException("El usuario con id \" + id + \" no existe"));
+                .orElseThrow(() -> new IllegalArgumentException("El usuario con id " + id + " no existe"));
     }
 
     public void eliminar(Long id) {

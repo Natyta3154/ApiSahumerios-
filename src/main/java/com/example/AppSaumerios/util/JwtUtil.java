@@ -29,6 +29,19 @@ public class JwtUtil {
     }
     // Genera token JWT con id y rol
     public String generarToken(Long id, String rol) {
+
+        // Normalizar el rol al formato correcto
+        if (rol != null) {
+            // Si el rol viene de la BD en minúsculas, convertirlo a mayúsculas y agregar prefijo
+            if (!rol.startsWith("ROLE_")) {
+                rol = "ROLE_" + rol.toUpperCase();
+            } else {
+                // Si ya tiene prefijo, asegurar mayúsculas
+                rol = rol.toUpperCase();
+            }
+        } else {
+            rol = "ROLE_USER"; // Valor por defecto
+        }
         return Jwts.builder()
                 .setSubject(id.toString())
                 .claim("rol", rol)

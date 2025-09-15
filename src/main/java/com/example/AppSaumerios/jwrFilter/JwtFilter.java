@@ -101,9 +101,12 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // 2. Validar token intentando extraer información
-            // En tu JwtUtil actual, la validación ocurre al extraer los claims
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
             String rol = jwtUtil.obtenerRolDesdeToken(token);
+
+            // Agregar logs de depuración después de extraer la información
+            logger.debug("[{}] Usuario ID extraído del token: {}", requestId, userId);
+            logger.debug("[{}] Rol extraído del token: {}", requestId, rol);
 
             // 3. Validar información esencial
             if (userId == null || rol == null || rol.isBlank()) {
@@ -131,7 +134,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(
                             userId.toString(),
                             null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + rol.toUpperCase()))
+                            List.of(new SimpleGrantedAuthority(rol))
                     );
 
             // 7. Establecer en el contexto de seguridad
@@ -164,8 +167,8 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private boolean isRolValido(String rol) {
-        // Validar que el rol esté en la lista de roles permitidos
-        return List.of("ADMIN", "USER", "EMPLEADO", "CLIENT").contains(rol.toUpperCase());
+        // Validar que el rol esté en la lista de roles permitidos (con prefijo ROLE_)
+        return List.of("ROLE_ADMIN", "ROLE_USER", "ROLE_EMPLEADO", "ROLE_CLIENT").contains(rol);
     }
 
     private void enviarError(HttpServletResponse response, int status, String message) {

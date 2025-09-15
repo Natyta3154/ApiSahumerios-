@@ -61,13 +61,19 @@ public class UsuarioController {
         }
     }
 
-    // Crear nuevo usuario (solo admin)
     @PostMapping("/agregarUser")
     public ResponseEntity<?> agregarUsuario(Authentication authentication,
                                             @RequestBody Usuarios nuevoUsuario) {
-        if (!authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        // Revisar que tenga rol ADMIN
+        boolean esAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!esAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Acceso denegado", "message", "No tienes permisos para acceder a este recurso"));
         }
+
         try {
             Usuarios usuarioCreado = usuarioService.guardar(nuevoUsuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(usuarioCreado);
@@ -75,6 +81,7 @@ public class UsuarioController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
 
     // Actualizar usuario (solo admin)
     @PutMapping("/editarUser/{id}")

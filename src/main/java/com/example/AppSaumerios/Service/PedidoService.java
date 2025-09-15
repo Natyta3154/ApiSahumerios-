@@ -36,6 +36,10 @@ public class PedidoService {
     @Autowired
     private EntityManager entityManager;
 
+
+
+
+
     // =========================
     // Crear pedido con detalles
     // =========================
@@ -155,25 +159,70 @@ public class PedidoService {
     }
 
     // =========================
-    // Convertir DetallePedido a DTO
+    // Convertir entidad DetallePedido a DTO
     // =========================
-    public DetallePedidoDTO convertirADTO(DetallePedido detalle) {
-        if (detalle == null) return null;
 
-        DetallePedidoDTO dto = new DetallePedidoDTO();
-        dto.setPedidoId(detalle.getPedido() != null ? detalle.getPedido().getId() : null);
-        dto.setProductoId(detalle.getProducto() != null ? detalle.getProducto().getId() : null);
-        dto.setCantidad(detalle.getCantidad());
-        dto.setSubtotal(detalle.getSubtotal());
+    public DetallePedidoResponseDTO convertirADTO(DetallePedido det) {
+        DetallePedidoResponseDTO dto = new DetallePedidoResponseDTO();
+
+        dto.setId(det.getId());
+        dto.setPedidoId(det.getPedido().getId());
+        dto.setProductoId(det.getProducto().getId());
+        dto.setProductoNombre(det.getProducto().getNombre());
+        dto.setCantidad(det.getCantidad());
+        dto.setPrecioUnitario(det.getProducto().getPrecio() != null ? det.getProducto().getPrecio() : BigDecimal.ZERO);
+        dto.setSubtotal(det.getProducto().getPrecio() != null
+                ? det.getProducto().getPrecio().multiply(BigDecimal.valueOf(det.getCantidad()))
+                : BigDecimal.ZERO);
+        dto.setImagenUrl(det.getProducto().getImagenUrl());
+
         return dto;
     }
 
     // =========================
-    // Convertir lista de DetallePedido a lista de DTOs
-    // =========================
-    public List<DetallePedidoDTO> convertirListaADTO(List<DetallePedido> detalles) {
+// Convertir lista de DetallePedido a lista de ResponseDTOs
+// =========================
+    public List<DetallePedidoResponseDTO> convertirListaADTO(List<DetallePedido> detalles) {
         return detalles.stream()
                 .map(this::convertirADTO)
                 .collect(Collectors.toList());
     }
+
+
+
+
+    @Autowired
+    private MercadoPagoService mercadoPagoService;
+
+    public Pedidos crearPedidoConPago(CrearPedidoRequestDTO crearPedidoRequestDTO) {
+        // Crear el pedido (tu lógica existente)
+        Pedidos pedido = crearPedido(crearPedidoRequestDTO);
+
+        // Crear preferencia de pago en MercadoPago
+        String preferenciaId = mercadoPagoService.crearPreferenciaPago(pedido);
+
+        return pedido;
+    }
+
+    public void actualizarEstadoPago(Long pedidoId, String estadoPago, String pagoId, String metodoPago) {
+        Pedidos pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+        pedido.setEstadoPago(estadoPago);
+        pedido.setPagoId(pagoId);
+        pedido.setMetodoPago(metodoPago);
+        pedido.setFechaActualizacionPago(LocalDateTime.now());
+
+        if ("approved".equals(estadoPago)) {
+            pedido.setEstado(EstadoPedido.PAGADO);
+            pedido.setFechaAprobacionPago(LocalDateTime.now());
+        } else if ("rejected".equals(estadoPago)) {
+            pedido.setEstado(EstadoPedido.CANCELADO);
+        }
+
+        pedidoRepository.save(pedido);
+    }
+
+
+
 }

@@ -5,26 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
-import com.example.AppSaumerios.jwrFilter.JwtFilter;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -35,19 +15,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
-
-
-
 
 @Configuration
-@EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter;
+    private final JwtFilter jwtFilterUtil;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
-        this.jwtFilter = jwtFilter;
+    // Constructor correctamente inicializado
+    public SecurityConfig(JwtFilter jwtFilterUtil) {
+        this.jwtFilterUtil = jwtFilterUtil;
     }
 
     @Bean
@@ -55,9 +31,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -68,24 +42,18 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/usuarios/registrar", "/usuarios/login").permitAll()
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(
                                 "/productos/listado",
                                 "/productos/*",
                                 "/api/ofertas/listar",
                                 "/api/ofertas/con-precio",
-                                "/usuarios/registrar",
-                                "/usuarios/login",
                                 "/atributos/listado",
                                 "/detallePedidos/{pedidoId}",
-                                "/detallePedidos/*")
-                        .permitAll()
-                        .requestMatchers(
-                                "/pedidos/relizarPedidos",
-                                "/pedidos")
-                        .hasRole("USER")
-                        .requestMatchers("/pedidos/*").hasRole("USER") // ver su propio pedido
+                                "/detallePedidos",
+                                "/api/webhook/**"
+
+                        ).permitAll()
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(
                                 "/usuarios",
                                 "/usuarios/listaDeUser",
@@ -106,11 +74,17 @@ public class SecurityConfig {
                                 "/atributos/agregar",
                                 "/atributos/editar/{id}",
                                 "/atributos/eliminar/{id}",
-                                "/detallePedidos/admin/{id}")
-                        .hasAuthority("ROLE_ADMIN")
+                                "/detallePedidos/admin/{id}"
+                        ).hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(
+                                "/pedidos/realizarPedido",
+                                "/pedidos/realizarPedidoConPago",
+                                "/pedidos/**"
+                        ).hasAuthority("ROLE_USER")  // Cambiado de hasRole("USER") a hasAuthority("ROLE_USER")
+                        .requestMatchers("/api/pagos/**").hasAuthority("ROLE_USER")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilterUtil, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -121,10 +95,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:8080",
-                "http://localhost:9002",   // 👈 tu frontend
+                "http://localhost:9002",
                 "https://api-sahumerios.vercel.app",
-                "https://hernan.alwaysdata.net",
-                "https://6000-firebase-studio-1756885120718.cluster-f73ibkkuije66wssuontdtbx6q.cloudworkstations.dev"
+                "https://hernan.alwaysdata.net"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList(

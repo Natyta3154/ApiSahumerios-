@@ -35,6 +35,28 @@ public class Pedidos {
     @JsonIgnoreProperties("pedido") // ✅ Evita recursividad infinita
     private List<DetallePedido> detalles = new ArrayList<>();
 
+    // *********** integración con MercadoPago *************
+    @Column(name = "preferencia_id")
+    private String preferenciaId;
+
+    @Column(name = "pago_id")
+    private String pagoId;
+
+    @Column(name = "estado_pago")
+    private String estadoPago;
+
+    @Column(name = "fecha_actualizacion_pago")
+    private LocalDateTime fechaActualizacionPago;
+
+    @Column(name = "metodo_pago")
+    private String metodoPago;
+
+    @Column(name = "fecha_aprobacion_pago")
+    private LocalDateTime fechaAprobacionPago;
+
+
+
+
     public Pedidos() {}
 
     public Pedidos(Long id, Usuarios usuario, LocalDateTime fecha, BigDecimal total, EstadoPedido estado) {
@@ -67,4 +89,27 @@ public class Pedidos {
 
     public EstadoPedido getEstado() { return estado; }
     public void setEstado(EstadoPedido estado) { this.estado = estado; }
+
+
+    // Getters y Setters INTEGRACION MERCADOPAGO
+    public String getPreferenciaId() { return preferenciaId; }
+    public void setPreferenciaId(String preferenciaId) { this.preferenciaId = preferenciaId; }
+
+    public String getPagoId() { return pagoId; }
+    public void setPagoId(String pagoId) { this.pagoId = pagoId; }
+
+    public String getEstadoPago() { return estadoPago; }
+    public void setEstadoPago(String estadoPago) { this.estadoPago = estadoPago; }
+
+    public LocalDateTime getFechaActualizacionPago() { return fechaActualizacionPago; }
+    public void setFechaActualizacionPago(LocalDateTime fechaActualizacionPago) { this.fechaActualizacionPago = fechaActualizacionPago; }
+
+    public String getMetodoPago() { return metodoPago; }
+    public void setMetodoPago(String metodoPago) { this.metodoPago = metodoPago; }
+
+    public LocalDateTime getFechaAprobacionPago() { return fechaAprobacionPago; }
+    public void setFechaAprobacionPago(LocalDateTime fechaAprobacionPago) { this.fechaAprobacionPago = fechaAprobacionPago; }
 }
+
+
+

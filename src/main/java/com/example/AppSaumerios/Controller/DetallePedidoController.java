@@ -3,6 +3,7 @@ package com.example.AppSaumerios.Controller;
 import com.example.AppSaumerios.Service.DetallePedidoService;
 import com.example.AppSaumerios.Service.PedidoService;
 import com.example.AppSaumerios.dto.DetallePedidoDTO;
+import com.example.AppSaumerios.dto.DetallePedidoResponseDTO;
 import com.example.AppSaumerios.entity.DetallePedido;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +44,7 @@ public class DetallePedidoController {
     public ResponseEntity<?> obtenerDetallesPorPedido(@PathVariable Long pedidoId) {
         try {
             List<DetallePedido> detalles = detallePedidoService.obtenerDetallesPorPedidoId(pedidoId);
-            List<DetallePedidoDTO> detallesDTO = detalles.stream()
+            List<DetallePedidoResponseDTO> detallesDTO = detalles.stream()
                     .map(det -> pedidoService.convertirADTO(det))
                     .collect(Collectors.toList());
             return ResponseEntity.ok(detallesDTO);
@@ -51,4 +52,5 @@ public class DetallePedidoController {
             return ResponseEntity.notFound().build();
         }
     }
+
 }
