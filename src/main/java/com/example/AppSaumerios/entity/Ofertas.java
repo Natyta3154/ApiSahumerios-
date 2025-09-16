@@ -1,5 +1,6 @@
 package com.example.AppSaumerios.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,6 +41,7 @@ public class Ofertas {
 
     @ManyToOne
     @JoinColumn(name = "producto_id")
+    @JsonBackReference
     private Productos producto;
 
     public Ofertas() {}

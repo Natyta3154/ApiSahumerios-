@@ -189,8 +189,27 @@ public class ProductosController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/eliminar/{id}")
-    public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
-        productoservice.eliminarProductos(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<String> eliminarProducto(@PathVariable Long id) {
+        try {
+            Productos producto = productoRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+            int cantidadOfertas = producto.getOfertas() != null ? producto.getOfertas().size() : 0;
+
+            // Borrar el producto junto con sus ofertas automáticamente gracias a cascade
+            productoRepository.delete(producto);
+
+            String mensaje = "Producto eliminado correctamente";
+            if (cantidadOfertas > 0) {
+                mensaje += " junto con " + cantidadOfertas + " oferta(s) asociada(s)";
+            }
+
+            return ResponseEntity.ok(mensaje);
+
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body("Error al eliminar producto: " + ex.getMessage());
+        }
     }
+
+
 }
