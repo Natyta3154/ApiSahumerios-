@@ -24,6 +24,7 @@ public class CorsConfig {
                         // Orígenes permitidos (frontend local)
                         .allowedOrigins("http://localhost:9002", "http://127.0.0.1:5500",
                                 "http://127.0.0.1:5500",
+                                "https://apisahumerios.onrender.com",
                                 "https://6000-firebase-studio-1756885120718.cluster-f73ibkkuije66wssuontdtbx6q.cloudworkstations.dev")
                         // Métodos HTTP permitidos
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
