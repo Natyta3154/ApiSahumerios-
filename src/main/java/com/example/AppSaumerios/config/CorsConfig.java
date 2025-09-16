@@ -19,19 +19,24 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                // Permitir requests a todos los endpoints
+
+                // Detectar el entorno
+                String profile = System.getProperty("spring.profiles.active", "dev");
+                String frontendUrl;
+
+                if ("prod".equals(profile)) {
+                    // Producción: tu frontend alojado en Render
+                    frontendUrl = "https://tu-front-en-render.com";
+                } else {
+                    // Desarrollo: localhost
+                    frontendUrl = "http://localhost:9002";
+                }
+
                 registry.addMapping("/**")
-                        // Orígenes permitidos (frontend local)
-                        .allowedOrigins("http://localhost:9002", "http://127.0.0.1:5500",
-                                "http://127.0.0.1:5500",
-                                "https://apisahumerios.onrender.com",
-                                "https://6000-firebase-studio-1756885120718.cluster-f73ibkkuije66wssuontdtbx6q.cloudworkstations.dev")
-                        // Métodos HTTP permitidos
+                        .allowedOrigins(frontendUrl)   // Solo un origen permitido cuando allowCredentials=true
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        // Permitir todos los headers
                         .allowedHeaders("*")
-                        // Permitir envío de credenciales (cookies, auth)
-                        .allowCredentials(true);
+                        .allowCredentials(true);      // Permitir envío de cookies HttpOnly
             }
         };
     }
