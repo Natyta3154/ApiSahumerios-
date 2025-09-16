@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @RequestMapping("/api/ofertas")
 @CrossOrigin(origins = {
@@ -59,17 +58,18 @@ public class OfertaController {
     // =========================
     // Crear nueva oferta - Solo Admin
     // =========================
-    @PostMapping("/crearOferta")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PostMapping("/crearOferta")
     public ResponseEntity<OfertaDTO> crearOferta(@RequestBody OfertaDTO dto) {
-        return ResponseEntity.ok(ofertaService.crearOfertaDTO(dto));
+        OfertaDTO creado = ofertaService.crearOfertaDTO(dto);
+        return ResponseEntity.ok(creado);
     }
 
     // =========================
     // Actualizar oferta existente - Solo Admin
     // =========================
-    @PutMapping("/editar/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PutMapping("/editar/{id}")
     public ResponseEntity<OfertaDTO> actualizar(@PathVariable Long id, @RequestBody OfertaDTO dto) {
         OfertaDTO ofertaExistente = ofertaService.buscarPorIdDTO(id);
         if (ofertaExistente == null) {
@@ -80,14 +80,15 @@ public class OfertaController {
         dto.setProductoId(ofertaExistente.getProductoId());
         dto.setIdOferta(id);
 
-        return ResponseEntity.ok(ofertaService.crearOfertaDTO(dto));
+        OfertaDTO actualizado = ofertaService.crearOfertaDTO(dto);
+        return ResponseEntity.ok(actualizado);
     }
 
     // =========================
     // Eliminar oferta - Solo Admin
     // =========================
-    @DeleteMapping("/eliminar/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         OfertaDTO ofertaExistente = ofertaService.buscarPorIdDTO(id);
         if (ofertaExistente != null) {

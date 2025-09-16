@@ -6,8 +6,7 @@ import com.example.AppSaumerios.util.JwtUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,44 +35,27 @@ public class UsuarioController {
     // ===================== ADMIN =====================
 
     // Obtener todos los usuarios (solo admin)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/listaDeUser")
-    public ResponseEntity<List<Usuarios>> obtenerUsuarios(Authentication authentication) {
-        if (authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
-            return ResponseEntity.ok(usuarioService.obtenerUsuarios());
-        }
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    public ResponseEntity<List<Usuarios>> obtenerUsuarios() {
+        return ResponseEntity.ok(usuarioService.obtenerUsuarios());
     }
 
     // Obtener usuario por ID (solo admin)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerUsuarioPorId(Authentication authentication,
-                                                 @PathVariable Long id) {
-        if (!authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
+    public ResponseEntity<?> obtenerUsuarioPorId(@PathVariable Long id) {
         Optional<Usuarios> usuarioOpt = usuarioService.obtenerUsuarioPorId(id);
-        if (usuarioOpt.isPresent()) {
-            return ResponseEntity.ok(usuarioOpt.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Usuario no encontrado");
-        }
+        return usuarioOpt
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Usuario no encontrado"));
     }
 
+    // Agregar usuario (solo admin)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/agregarUser")
-    public ResponseEntity<?> agregarUsuario(Authentication authentication,
-                                            @RequestBody Usuarios nuevoUsuario) {
-
-        // Revisar que tenga rol ADMIN
-        boolean esAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        if (!esAdmin) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Acceso denegado", "message", "No tienes permisos para acceder a este recurso"));
-        }
-
+    public ResponseEntity<?> agregarUsuario(@RequestBody Usuarios nuevoUsuario) {
         try {
             Usuarios usuarioCreado = usuarioService.guardar(nuevoUsuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(usuarioCreado);
@@ -82,16 +64,11 @@ public class UsuarioController {
         }
     }
 
-
     // Actualizar usuario (solo admin)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/editarUser/{id}")
-    public ResponseEntity<?> actualizarUsuario(Authentication authentication,
-                                               @PathVariable Long id,
+    public ResponseEntity<?> actualizarUsuario(@PathVariable Long id,
                                                @RequestBody Usuarios usuarioActualizado) {
-        if (!authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("No tienes permisos para actualizar este usuario");
-        }
         try {
             return ResponseEntity.ok(usuarioService.actualizar(id, usuarioActualizado));
         } catch (IllegalArgumentException e) {
@@ -100,12 +77,9 @@ public class UsuarioController {
     }
 
     // Eliminar usuario (solo admin)
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/eliminarUser/{id}")
-    public ResponseEntity<?> eliminarUsuario(Authentication authentication,
-                                             @PathVariable Long id) {
-        if (!authentication.getAuthorities().contains(new SimpleGrantedAuthority("admin"))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+    public ResponseEntity<?> eliminarUsuario(@PathVariable Long id) {
         usuarioService.eliminar(id);
         return ResponseEntity.ok("Usuario eliminado correctamente");
     }
@@ -115,7 +89,6 @@ public class UsuarioController {
     // Registro de usuario
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@Valid @RequestBody Usuarios nuevoUsuario, BindingResult result) {
-        // Validaciones automáticas
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(
                     Map.of(
@@ -153,11 +126,8 @@ public class UsuarioController {
 
         if (usuario.isPresent()) {
             Usuarios u = usuario.get();
-
-            // Generar token JWT
             String token = jwtUtil.generarToken(u.getId(), u.getRol());
 
-            // Construir respuesta sin enviar password
             Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("usuario", Map.of(

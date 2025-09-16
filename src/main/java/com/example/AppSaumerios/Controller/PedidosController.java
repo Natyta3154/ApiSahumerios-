@@ -2,12 +2,15 @@ package com.example.AppSaumerios.Controller;
 
 import com.example.AppSaumerios.dto.*;
 import com.example.AppSaumerios.entity.Pedidos;
+import com.example.AppSaumerios.entity.Usuarios;
 import com.example.AppSaumerios.Service.MercadoPagoService;
 import com.example.AppSaumerios.Service.PedidoService;
+import com.example.AppSaumerios.Service.UsuarioService;
 import com.example.AppSaumerios.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -27,12 +30,18 @@ public class PedidosController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private UsuarioService usuarioService;
+
     // =========================
-    // Crear nuevo pedido
+    // Crear nuevo pedido (usuario logueado)
     // =========================
     @PostMapping("/realizarPedido")
-    public ResponseEntity<?> crearPedido(@RequestBody CrearPedidoRequestDTO crearPedidoRequestDTO) {
+    public ResponseEntity<?> crearPedido(@RequestBody CrearPedidoRequestDTO crearPedidoRequestDTO,
+                                         HttpServletRequest request) {
         try {
+            Usuarios usuario = obtenerUsuarioDesdeToken(request);
+            crearPedidoRequestDTO.setUsuarioId(usuario.getId()); // asignar ID real
             Pedidos pedido = pedidoService.crearPedido(crearPedidoRequestDTO);
 
             List<DetallePedidoResponseDTO> detallesDTO = pedido.getDetalles().stream()
@@ -46,11 +55,14 @@ public class PedidosController {
     }
 
     // =========================
-    // Crear nuevo pedido con MercadoPago
+    // Crear pedido con pago (usuario logueado)
     // =========================
     @PostMapping("/realizarPedidoConPago")
-    public ResponseEntity<?> crearPedidoConPago(@RequestBody CrearPedidoRequestDTO crearPedidoRequestDTO) {
+    public ResponseEntity<?> crearPedidoConPago(@RequestBody CrearPedidoRequestDTO crearPedidoRequestDTO,
+                                                HttpServletRequest request) {
         try {
+            Usuarios usuario = obtenerUsuarioDesdeToken(request);
+            crearPedidoRequestDTO.setUsuarioId(usuario.getId());
             Pedidos pedido = pedidoService.crearPedido(crearPedidoRequestDTO);
             String preferenciaId = mercadoPagoService.crearPreferenciaPago(pedido);
 
@@ -71,13 +83,13 @@ public class PedidosController {
     }
 
     // =========================
-    // Listar pedidos de un usuario
+    // Obtener pedidos del usuario logueado
     // =========================
     @GetMapping
     public ResponseEntity<?> obtenerPedidosUsuario(HttpServletRequest request) {
         try {
-            Long usuarioId = obtenerUsuarioIdDesdeToken(request);
-            List<Pedidos> pedidos = pedidoService.obtenerPedidosPorUsuario(usuarioId);
+            Usuarios usuario = obtenerUsuarioDesdeToken(request);
+            List<Pedidos> pedidos = pedidoService.obtenerPedidosPorUsuario(usuario.getId());
 
             List<CrearPedidoResponseDTO> pedidosDTO = pedidos.stream().map(p -> {
                 List<DetallePedidoResponseDTO> detallesDTO = p.getDetalles().stream()
@@ -93,10 +105,19 @@ public class PedidosController {
     }
 
     // =========================
-    // Actualizar estado de un pedido (admin)
+    // Actualizar estado de un pedido (solo admin)
     // =========================
     @PutMapping("/{id}/estado")
-    public ResponseEntity<?> actualizarEstado(@PathVariable Long id, @RequestParam String estado) {
+    public ResponseEntity<?> actualizarEstado(@PathVariable Long id,
+                                              @RequestParam String estado,
+                                              Authentication authentication) {
+        // Solo admins pueden cambiar estados
+        boolean esAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!esAdmin) {
+            return ResponseEntity.status(403).body("No tienes permisos para actualizar el estado");
+        }
+
         try {
             Pedidos pedidoActualizado = pedidoService.actualizarEstado(id, estado);
             return ResponseEntity.ok(pedidoActualizado);
@@ -106,45 +127,7 @@ public class PedidosController {
     }
 
     // =========================
-    // Endpoint de redirección después de pago exitoso
-    // =========================
-    @GetMapping("/exito")
-    public ResponseEntity<String> pagoExitoso(@RequestParam Long pedido_id) {
-        try {
-            Pedidos pedido = pedidoService.obtenerPedidoPorId(pedido_id);
-            return ResponseEntity.ok("Pago exitoso para el pedido: " + pedido_id +
-                    ". Estado actual: " + pedido.getEstadoPago());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al procesar pago exitoso: " + e.getMessage());
-        }
-    }
-
-    // Endpoint para pago fallido
-    @GetMapping("/fallo")
-    public ResponseEntity<String> pagoFallido(@RequestParam Long pedido_id) {
-        try {
-            Pedidos pedido = pedidoService.obtenerPedidoPorId(pedido_id);
-            return ResponseEntity.ok("Pago fallido para el pedido: " + pedido_id +
-                    ". Estado actual: " + pedido.getEstadoPago());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al procesar pago fallido: " + e.getMessage());
-        }
-    }
-
-    // Endpoint para pago pendiente
-    @GetMapping("/pendiente")
-    public ResponseEntity<String> pagoPendiente(@RequestParam Long pedido_id) {
-        try {
-            Pedidos pedido = pedidoService.obtenerPedidoPorId(pedido_id);
-            return ResponseEntity.ok("Pago pendiente para el pedido: " + pedido_id +
-                    ". Estado actual: " + pedido.getEstadoPago());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al procesar pago pendiente: " + e.getMessage());
-        }
-    }
-
-    // =========================
-    // Webhook de MercadoPago
+    // Webhook y pagos (igual)
     // =========================
     @PostMapping("/webhook/mercadopago")
     public ResponseEntity<String> recibirWebhookMercadoPago(@RequestBody(required = false) String rawData,
@@ -160,9 +143,6 @@ public class PedidosController {
         }
     }
 
-    // =========================
-    // Obtener estado de pago de un pedido
-    // =========================
     @GetMapping("/{pedidoId}/estado-pago")
     public ResponseEntity<?> obtenerEstadoPago(@PathVariable Long pedidoId) {
         try {
@@ -181,9 +161,6 @@ public class PedidosController {
         }
     }
 
-    // =========================
-    // Crear preferencia de pago para un pedido existente
-    // =========================
     @PostMapping("/{pedidoId}/crear-preferencia-pago")
     public ResponseEntity<?> crearPreferenciaPago(@PathVariable Long pedidoId) {
         try {
@@ -203,11 +180,13 @@ public class PedidosController {
     // =========================
     // Helper: obtener usuario desde JWT
     // =========================
-    private Long obtenerUsuarioIdDesdeToken(HttpServletRequest request) {
+    private Usuarios obtenerUsuarioDesdeToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            return jwtUtil.obtenerIdDesdeToken(token);
+            Long usuarioId = jwtUtil.obtenerIdDesdeToken(token);
+            return usuarioService.obtenerUsuarioPorId(usuarioId)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         }
         throw new RuntimeException("Token no válido");
     }

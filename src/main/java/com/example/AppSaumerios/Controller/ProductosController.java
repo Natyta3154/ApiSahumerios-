@@ -16,9 +16,9 @@ import com.example.AppSaumerios.repository.ProductoRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +71,7 @@ public class ProductosController {
         return ResponseEntity.ok(dto);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     @PostMapping("/vender/{id}")
     public ResponseEntity<ProductoDTO> venderProducto(
             @PathVariable Long id,
@@ -79,7 +80,6 @@ public class ProductosController {
         Productos productoActualizado = productoservice.venderProducto(id, cantidad);
         List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
         ProductoDTO dto = productoservice.mapToDTO(productoActualizado, todasLasOfertas);
-
         dto.setMensaje("Venta realizada, stock actualizado");
         return ResponseEntity.ok(dto);
     }
@@ -88,6 +88,7 @@ public class ProductosController {
     // ENDPOINTS ADMIN
     // -------------------
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/agregar")
     public ResponseEntity<ProductoDTO> agregarProducto(@RequestBody ProductoDTO request) {
         List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
@@ -114,12 +115,8 @@ public class ProductosController {
         producto.setDescripcion(request.getDescripcion());
         producto.setPrecio(request.getPrecio());
         producto.setPrecioMayorista(request.getPrecioMayorista() != null ? request.getPrecioMayorista() : request.getPrecio());
-
-        int stock = request.getStock() != null ? request.getStock() : 0;
-        int totalIngresado = request.getTotalIngresado() != null ? request.getTotalIngresado() : stock;
-        producto.setStock(stock);
-        producto.setTotalIngresado(totalIngresado);
-
+        producto.setStock(request.getStock() != null ? request.getStock() : 0);
+        producto.setTotalIngresado(request.getTotalIngresado() != null ? request.getTotalIngresado() : producto.getStock());
         producto.setImagenUrl(request.getImagenUrl());
         producto.setActivo(request.getActivo() != null ? request.getActivo() : true);
         producto.setFechaCreacion(LocalDateTime.now());
@@ -176,33 +173,21 @@ public class ProductosController {
         dto.setMensaje("Producto agregado correctamente");
         return ResponseEntity.ok(dto);
     }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/editar/{id}")
     public ResponseEntity<ProductoDTO> actualizarProducto(
             @PathVariable Long id,
             @RequestBody ProductoUpdateDTO dto) {
-        // LOG PARA DEBUG
-        System.out.println("DTO que se va a devolver al frontend:");
-        ProductoDTO dtoResponse = null;
-        System.out.println(dtoResponse);
 
-
-        // 1. Actualiza el producto usando tu service
         Productos actualizado = productoservice.actualizarProductos(id, dto);
-
-        // 2. Obtiene todas las ofertas activas para mapear correctamente
         List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+        ProductoDTO dtoResponse = productoservice.mapToDTO(actualizado, todasLasOfertas);
 
-        // 3. Mapea la entidad a DTO para retornar toda la info actualizada
-        dtoResponse = productoservice.mapToDTO(actualizado, todasLasOfertas);
-
-        // 4. Devuelve DTO completo
         return ResponseEntity.ok(dtoResponse);
     }
 
-
-
-
-
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
         productoservice.eliminarProductos(id);
