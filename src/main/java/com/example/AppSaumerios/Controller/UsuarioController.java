@@ -3,6 +3,8 @@ package com.example.AppSaumerios.Controller;
 import com.example.AppSaumerios.Service.UsuarioService;
 import com.example.AppSaumerios.entity.Usuarios;
 import com.example.AppSaumerios.util.JwtUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -118,7 +120,7 @@ public class UsuarioController {
 
     // Login de usuario
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Usuarios credenciales) {
+    public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
         Optional<Usuarios> usuario = usuarioService.login(
                 credenciales.getEmail(),
                 credenciales.getPassword()
@@ -128,19 +130,29 @@ public class UsuarioController {
             Usuarios u = usuario.get();
             String token = jwtUtil.generarToken(u.getId(), u.getRol());
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("usuario", Map.of(
+            // Creamos la cookie HttpOnly
+            Cookie cookie = new Cookie("token", token);
+            cookie.setHttpOnly(true);   // No accesible desde JS
+            cookie.setSecure(true);     // Solo HTTPS
+            cookie.setPath("/");        // Cookie válida para toda la app
+            cookie.setMaxAge(3600);     // 1 hora
+
+            response.addCookie(cookie);
+
+            // Retornamos solo los datos del usuario (sin el token)
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("usuario", Map.of(
                     "id", u.getId(),
                     "nombre", u.getNombre(),
                     "email", u.getEmail(),
                     "rol", u.getRol()
             ));
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(responseBody);
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Credenciales inválidas");
         }
     }
+
 }
