@@ -1,6 +1,7 @@
 package com.example.AppSaumerios.jwrFilter;
 
 import com.example.AppSaumerios.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,14 +11,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-@Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
@@ -61,163 +61,75 @@ public class JwtFilter extends OncePerRequestFilter {
     private String extraerToken(HttpServletRequest request) {
         String authHeader = request.getHeader(AUTH_HEADER);
 
-        if (authHeader == null) {
-            return null;
-        }
-
-        if (!authHeader.startsWith(BEARER_PREFIX)) {
-            logger.warn("Formato de Authorization header inválido");
-            return null;
-        }
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) return null;
 
         String token = authHeader.substring(BEARER_PREFIX.length()).trim();
-
-        // Validaciones básicas del token
-        if (token.isEmpty()) {
-            logger.warn("Token vacío después de Bearer prefix");
-            return null;
-        }
-
-        if (token.length() > MAX_TOKEN_LENGTH) {
-            logger.warn("Token demasiado largo: {} caracteres", token.length());
-            return null;
-        }
-
-        // Validar formato básico del token JWT (debe tener 3 partes separadas por puntos)
-        if (!token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$")) {
-            logger.warn("Formato de token JWT inválido");
-            return null;
-        }
+        if (token.isEmpty() || token.length() > MAX_TOKEN_LENGTH) return null;
+        if (!token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$")) return null;
 
         return token;
     }
 
     private boolean validarYConfigurarAutenticacion(String token, HttpServletResponse response, String requestId) {
         try {
-            // 1. Validaciones iniciales
-            if (token.isBlank()) {
-                enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token vacío");
-                return false;
-            }
-
-            // 2. Validar token intentando extraer información
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
             String rol = jwtUtil.obtenerRolDesdeToken(token);
 
-            // Agregar logs de depuración después de extraer la información
-            logger.debug("[{}] Usuario ID extraído del token: {}", requestId, userId);
-            logger.debug("[{}] Rol extraído del token: {}", requestId, rol);
-
-            // 3. Validar información esencial
             if (userId == null || rol == null || rol.isBlank()) {
-                logger.warn("[{}] Token con información incompleta", requestId);
                 enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token con información incompleta");
                 return false;
             }
 
-            // 4. Validar formato del rol
-            if (!isRolValido(rol)) {
-                logger.warn("[{}] Rol inválido en token: {}", requestId, rol);
-                enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Rol inválido");
-                return false;
-            }
+            // 🔹 Asegurar prefijo ROLE_
+            String authority = rol.startsWith("ROLE_") ? rol : "ROLE_" + rol;
 
-            // 5. Validar que el ID sea positivo
-            if (userId <= 0) {
-                logger.warn("[{}] ID de usuario inválido: {}", requestId, userId);
-                enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "ID de usuario inválido");
-                return false;
-            }
-
-            // 6. Crear autenticación segura
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             userId.toString(),
                             null,
-                            List.of(new SimpleGrantedAuthority(rol))
+                            List.of(new SimpleGrantedAuthority(authority))
                     );
 
-            // 7. Establecer en el contexto de seguridad
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            logger.info("[{}] Usuario autenticado: ID={}, Rol={}", requestId, userId, rol);
+            logger.info("[{}] Usuario autenticado: ID={}, Rol={}", requestId, userId, authority);
             return true;
 
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            logger.warn("[{}] Token expirado: {}", requestId, e.getMessage());
             enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token expirado");
             return false;
-        } catch (io.jsonwebtoken.MalformedJwtException e) {
-            logger.warn("[{}] Token malformado: {}", requestId, e.getMessage());
-            enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token malformado");
-            return false;
-        } catch (io.jsonwebtoken.security.SignatureException e) {
-            logger.warn("[{}] Firma de token inválida: {}", requestId, e.getMessage());
-            enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Firma de token inválida");
-            return false;
-        } catch (NumberFormatException e) {
-            logger.warn("[{}] Formato de ID inválido en token: {}", requestId, e.getMessage());
-            enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Formato de token inválido");
-            return false;
         } catch (Exception e) {
-            logger.error("[{}] Error validando token: {}", requestId, e.getMessage());
             enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
             return false;
         }
-    }
-
-    private boolean isRolValido(String rol) {
-        // Validar que el rol esté en la lista de roles permitidos (con prefijo ROLE_)
-        return List.of("ROLE_ADMIN", "ROLE_USER", "ROLE_EMPLEADO", "ROLE_CLIENT").contains(rol);
     }
 
     private void enviarError(HttpServletResponse response, int status, String message) {
         try {
             response.setStatus(status);
             response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.setHeader("X-Content-Type-Options", "nosniff");
-            response.setHeader("X-Frame-Options", "DENY");
-
-            String jsonResponse = String.format(
-                    "{\"error\": \"unauthorized\", \"message\": \"%s\", \"timestamp\": \"%s\"}",
-                    message, new java.util.Date().toString()
-            );
-
-            response.getWriter().write(jsonResponse);
+            response.getWriter().write(String.format("{\"error\":\"unauthorized\",\"message\":\"%s\"}", message));
             response.getWriter().flush();
-
-        } catch (IOException e) {
-            logger.error("Error enviando respuesta de error: {}", e.getMessage());
-        }
+        } catch (IOException ignored) {}
     }
 
     private void enviarErrorCritico(HttpServletResponse response, String message) {
         try {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"internal_server_error\", \"message\": \"" + message + "\"}");
-        } catch (IOException e) {
-            // Fallback silencioso
-        }
+            response.getWriter().write("{\"error\":\"internal_server_error\",\"message\":\"" + message + "\"}");
+        } catch (IOException ignored) {}
     }
 
-    // No aplicar filtro a endpoints públicos
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        // Rutas públicas
-        // Solo rutas realmente públicas
-        return path.equals("/productos/listado") ||  // listado público
+        return path.equals("/productos/listado") ||
                 path.equals("/api/ofertas/listar") ||
-                path.startsWith("/api/ofertas/listar") ||
                 path.startsWith("/api/ofertas/con-precio") ||
                 path.equals("/usuarios/registrar") ||
                 path.equals("/usuarios/login") ||
                 path.equals("/atributos/listado") ||
-                path.startsWith("/detallePedidos/pedido") ||
-                path.matches("/detallePedidos/.*") ||
-                path.equals("/error") ||
-                path.equals("/favicon.ico");
+                path.startsWith("/detallePedidos");
     }
 }
