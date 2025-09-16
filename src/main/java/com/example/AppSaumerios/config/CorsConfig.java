@@ -26,7 +26,7 @@ public class CorsConfig {
 
                 if ("prod".equals(profile)) {
                     // Producción: tu frontend alojado en Render
-                    frontendUrl = "https://tu-front-en-render.com";
+                    frontendUrl = "https://apisahumerios.onrender.com";
                 } else {
                     // Desarrollo: localhost
                     frontendUrl = "http://localhost:9002";
