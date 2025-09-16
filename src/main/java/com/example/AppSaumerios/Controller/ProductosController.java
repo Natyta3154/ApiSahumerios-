@@ -20,9 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @CrossOrigin(origins = "http://localhost:9002")
 @RestController
@@ -189,27 +187,18 @@ public class ProductosController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/eliminar/{id}")
-    public ResponseEntity<String> eliminarProducto(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> eliminarProducto(@PathVariable Long id) {
+        Map<String, String> response = new HashMap<>();
         try {
-            Productos producto = productoRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-
-            int cantidadOfertas = producto.getOfertas() != null ? producto.getOfertas().size() : 0;
-
-            // Borrar el producto junto con sus ofertas automáticamente gracias a cascade
-            productoRepository.delete(producto);
-
-            String mensaje = "Producto eliminado correctamente";
-            if (cantidadOfertas > 0) {
-                mensaje += " junto con " + cantidadOfertas + " oferta(s) asociada(s)";
-            }
-
-            return ResponseEntity.ok(mensaje);
-
-        } catch (Exception ex) {
-            return ResponseEntity.badRequest().body("Error al eliminar producto: " + ex.getMessage());
+            String mensaje = productoservice.eliminarProductos(id);
+            response.put("mensaje", mensaje);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            response.put("error", ex.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
+
 
 
 }

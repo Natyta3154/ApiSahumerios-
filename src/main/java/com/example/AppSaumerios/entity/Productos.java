@@ -104,6 +104,16 @@ public class Productos {
         this.productoAtributos.add(pa);
     }
 
+
+
+    @OneToMany(mappedBy = "producto")
+    private List<DetallePedido> detallePedidos = new ArrayList<>();
+
+    // Getter
+    public List<DetallePedido> getDetallePedidos() {
+        return detallePedidos;
+    }
+
     // ======================
     // Constructores
     // ======================

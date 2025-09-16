@@ -130,12 +130,29 @@ public class ProductoService {
         }
     }
 
-    public void eliminarProductos(Long id) {
-        if (!productoRepository.existsById(id)) {
-            throw new RuntimeException("No se puede eliminar: producto no encontrado");
+    @Transactional
+    public String eliminarProductos(Long id) {
+        Productos producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+        int cantidadOfertas = producto.getOfertas() != null ? producto.getOfertas().size() : 0;
+        int cantidadPedidos = producto.getDetallePedidos() != null ? producto.getDetallePedidos().size() : 0;
+
+        if (cantidadPedidos > 0) {
+            throw new RuntimeException("No se puede eliminar el producto: está asociado a "
+                    + cantidadPedidos + " pedido(s) existente(s)");
         }
-        productoRepository.deleteById(id);
+
+        productoRepository.delete(producto);
+
+        String mensaje = "Producto eliminado correctamente";
+        if (cantidadOfertas > 0) {
+            mensaje += " junto con " + cantidadOfertas + " oferta(s) asociada(s)";
+        }
+
+        return mensaje;
     }
+
 
     // =========================
 // LISTAR TODOS LOS PRODUCTOS CON OFERTAS
