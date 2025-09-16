@@ -64,16 +64,30 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String extraerToken(HttpServletRequest request) {
+        // 1️⃣ Primero intenta leer header Authorization
         String authHeader = request.getHeader(AUTH_HEADER);
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+            if (!token.isEmpty() && token.length() <= MAX_TOKEN_LENGTH
+                    && token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$")) {
+                return token;
+            }
+        }
 
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) return null;
+        // 2️⃣ Si no hay token en header, intenta leer cookie 'token'
+        if (request.getCookies() != null) {
+            for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+                if ("token".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
 
-        String token = authHeader.substring(BEARER_PREFIX.length()).trim();
-        if (token.isEmpty() || token.length() > MAX_TOKEN_LENGTH) return null;
-        if (!token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$")) return null;
-
-        return token;
+        // 3️⃣ No se encontró token
+        return null;
     }
+
+
 
     private boolean validarYConfigurarAutenticacion(String token, HttpServletResponse response, String requestId) {
         try {
