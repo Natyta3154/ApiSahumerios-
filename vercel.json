@@ -1,0 +1,15 @@
+{
+  "version" : 2,
+  "builds" : [
+    {
+      "src": "AppSaumeriosApplication",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "(.*)",
+      "dest" : "/"
+    }
+  ]
+}

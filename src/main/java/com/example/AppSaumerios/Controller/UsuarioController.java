@@ -21,9 +21,18 @@ import java.util.*;
  * - Registro y login para usuarios comunes
  * ============================================
  */
+
+
 @RestController
 @RequestMapping("/usuarios")
-@CrossOrigin(origins = "http://localhost:9002")
+@CrossOrigin(
+        origins = {
+                "http://localhost:9002",
+                "http://127.0.0.1:5500",
+                "https://tu-frontend.com"
+        },
+        allowCredentials = "true"
+)
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
@@ -35,15 +44,12 @@ public class UsuarioController {
     }
 
     // ===================== ADMIN =====================
-
-    // Obtener todos los usuarios (solo admin)
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/listaDeUser")
     public ResponseEntity<List<Usuarios>> obtenerUsuarios() {
         return ResponseEntity.ok(usuarioService.obtenerUsuarios());
     }
 
-    // Obtener usuario por ID (solo admin)
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerUsuarioPorId(@PathVariable Long id) {
@@ -54,7 +60,6 @@ public class UsuarioController {
                         .body("Usuario no encontrado"));
     }
 
-    // Agregar usuario (solo admin)
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/agregarUser")
     public ResponseEntity<?> agregarUsuario(@RequestBody Usuarios nuevoUsuario) {
@@ -66,7 +71,6 @@ public class UsuarioController {
         }
     }
 
-    // Actualizar usuario (solo admin)
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/editarUser/{id}")
     public ResponseEntity<?> actualizarUsuario(@PathVariable Long id,
@@ -78,7 +82,6 @@ public class UsuarioController {
         }
     }
 
-    // Eliminar usuario (solo admin)
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/eliminarUser/{id}")
     public ResponseEntity<?> eliminarUsuario(@PathVariable Long id) {
@@ -87,8 +90,6 @@ public class UsuarioController {
     }
 
     // ===================== USUARIO COMÚN =====================
-
-    // Registro de usuario
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@Valid @RequestBody Usuarios nuevoUsuario, BindingResult result) {
         if (result.hasErrors()) {
@@ -104,7 +105,7 @@ public class UsuarioController {
         }
 
         try {
-            nuevoUsuario.setRol("user"); // rol por defecto
+            nuevoUsuario.setRol("USER"); // rol por defecto
             Usuarios usuarioCreado = usuarioService.guardar(nuevoUsuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "mensaje", "Usuario registrado correctamente.",
@@ -118,7 +119,6 @@ public class UsuarioController {
         }
     }
 
-    // Login de usuario
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
         Optional<Usuarios> usuario = usuarioService.login(
@@ -130,16 +130,15 @@ public class UsuarioController {
             Usuarios u = usuario.get();
             String token = jwtUtil.generarToken(u.getId(), u.getRol());
 
-            // Creamos la cookie HttpOnly
+            // Crear cookie HttpOnly según entorno
             Cookie cookie = new Cookie("token", token);
-            cookie.setHttpOnly(true);   // No accesible desde JS
-            cookie.setSecure(true);     // Solo HTTPS
-            cookie.setPath("/");        // Cookie válida para toda la app
-            cookie.setMaxAge(3600);     // 1 hora
-
+            cookie.setHttpOnly(true);
+            cookie.setSecure(!isDev()); // HTTPS solo en producción
+            cookie.setPath("/");
+            cookie.setMaxAge(3600); // 1 hora
             response.addCookie(cookie);
 
-            // Retornamos solo los datos del usuario (sin el token)
+            // Retornar datos del usuario
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("usuario", Map.of(
                     "id", u.getId(),
@@ -147,12 +146,35 @@ public class UsuarioController {
                     "email", u.getEmail(),
                     "rol", u.getRol()
             ));
+            responseBody.put("token", token); // opcional si quieres retornar el token también
 
             return ResponseEntity.ok(responseBody);
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Credenciales inválidas");
         }
+
+
+    }
+    // ====== AQUÍ VA EL MÉTODO isDev ======
+    private boolean isDev() {
+        String profile = System.getProperty("spring.profiles.active", "dev");
+        return profile.equals("dev");
+    }
+    @GetMapping("/perfil")
+    public ResponseEntity<?> perfil(@CookieValue(value = "token", required = false) String token) {
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No hay sesión activa");
+        }
+
+        try {
+            Long userId = jwtUtil.obtenerIdDesdeToken(token); // <-- cambio aquí
+            Usuarios usuario = usuarioService.buscarPorId(userId); // asegúrate de tener este método
+            return ResponseEntity.ok(Map.of("usuario", usuario));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
+        }
     }
 
 }
+

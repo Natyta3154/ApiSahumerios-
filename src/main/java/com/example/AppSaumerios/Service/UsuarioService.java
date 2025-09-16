@@ -16,7 +16,6 @@ import java.util.Optional;
 // ============================================
 
 
-
 @Service
 public class UsuarioService {
 
@@ -30,7 +29,6 @@ public class UsuarioService {
 
     // ===================== ADMIN ====================
 
-    // Validar si usuario es admin
     public void validarAdmin(Usuarios usuario) {
         if (!"ADMIN".equalsIgnoreCase(usuario.getRol())) {
             throw new SecurityException("Acceso denegado. Solo administradores.");
@@ -45,6 +43,12 @@ public class UsuarioService {
         return usuarioRepository.findById(id);
     }
 
+    // Nuevo método para perfil: devuelve usuario o lanza excepción
+    public Usuarios buscarPorId(Long id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con id " + id));
+    }
+
     public Usuarios guardar(Usuarios usuario) {
         if (usuario.getEmail() == null || usuario.getEmail().isBlank()) {
             throw new IllegalArgumentException("El email no puede estar vacío");
@@ -53,19 +57,17 @@ public class UsuarioService {
             throw new IllegalArgumentException("La contraseña no puede estar vacía");
         }
 
-        // Normalizar el rol: quitar "ROLE_" si está presente y convertir a mayúsculas
         String rol = usuario.getRol();
         if (rol != null && !rol.isBlank()) {
             if (rol.startsWith("ROLE_")) {
-                rol = rol.substring(5); // quita "ROLE_"
+                rol = rol.substring(5);
             }
             rol = rol.toUpperCase();
         } else {
-            rol = "USER"; // valor por defecto
+            rol = "USER";
         }
         usuario.setRol(rol);
 
-        // Codificar la contraseña antes de guardar
         usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
 
         return usuarioRepository.save(usuario);
@@ -79,7 +81,6 @@ public class UsuarioService {
                     if (usuarioActualizado.getPassword() != null && !usuarioActualizado.getPassword().isBlank()) {
                         usuario.setPassword(passwordEncoder.encode(usuarioActualizado.getPassword()));
                     }
-                    // Normalizar el rol
                     String rol = usuarioActualizado.getRol();
                     if (rol != null && !rol.isBlank()) {
                         if (rol.startsWith("ROLE_")) {
@@ -107,7 +108,6 @@ public class UsuarioService {
         Optional<Usuarios> usuarioOpt = usuarioRepository.findByEmail(email);
         if (usuarioOpt.isPresent()) {
             Usuarios usuario = usuarioOpt.get();
-            // Comparar contraseña ingresada con la codificada
             if (passwordEncoder.matches(password, usuario.getPassword())) {
                 return Optional.of(usuario);
             }
