@@ -133,10 +133,19 @@ public class UsuarioController {
             // Crear cookie HttpOnly segura
             Cookie cookie = new Cookie("token", token);
             cookie.setHttpOnly(true);
-            cookie.setSecure(!isDev()); // HTTPS solo en producción
             cookie.setPath("/");
+
+            if (isDev()) {
+                // Desarrollo: localhost, Lax, sin HTTPS
+                cookie.setSecure(false);
+                cookie.setAttribute("SameSite", "Lax");
+            } else {
+                // Producción: cross-origin, HTTPS obligatorio
+                cookie.setSecure(true);
+                cookie.setAttribute("SameSite", "None");
+            }
+
             cookie.setMaxAge(3600); // 1 hora
-            cookie.setAttribute("SameSite", "Strict"); // evita CSRF en la mayoría de los casos
             response.addCookie(cookie);
 
             // Retornar solo info del usuario (no el token)
