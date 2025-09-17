@@ -64,24 +64,26 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String extraerToken(HttpServletRequest request) {
-        // 1️⃣ Primero intenta leer header Authorization
-        String authHeader = request.getHeader(AUTH_HEADER);
-        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
-            String token = authHeader.substring(BEARER_PREFIX.length()).trim();
-            if (!token.isEmpty() && token.length() <= MAX_TOKEN_LENGTH
-                    && token.matches("^[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+$")) {
-                return token;
-            }
-        }
-
-        // 2️⃣ Si no hay token en header, intenta leer cookie 'token'
+        // 1️⃣ Intentar leer token desde cookie
         if (request.getCookies() != null) {
             for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
                 if ("token".equals(cookie.getName())) {
-                    return cookie.getValue();
+                    String token = cookie.getValue();
+                    if (token != null && !token.isBlank() && token.length() <= MAX_TOKEN_LENGTH) {
+                        return token.trim();
+                    }
                 }
             }
         }
+
+        // 2️⃣ Fallback: leer Authorization header si no había cookie
+        /*String authHeader = request.getHeader(AUTH_HEADER);
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+            if (!token.isEmpty() && token.length() <= MAX_TOKEN_LENGTH) {
+                return token;
+            }
+        }*/
 
         // 3️⃣ No se encontró token
         return null;
@@ -89,19 +91,23 @@ public class JwtFilter extends OncePerRequestFilter {
 
 
 
+
     private boolean validarYConfigurarAutenticacion(String token, HttpServletResponse response, String requestId) {
         try {
+            // Obtenemos el ID y el rol del usuario desde el token JWT
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
             String rol = jwtUtil.obtenerRolDesdeToken(token);
 
+            // Validamos que el token tenga la info necesaria
             if (userId == null || rol == null || rol.isBlank()) {
                 enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token con información incompleta");
                 return false;
             }
 
-            // 🔹 Asegurar prefijo ROLE_
+            // 🔹 Aseguramos que el rol tenga el prefijo ROLE_ que Spring Security necesita
             String authority = rol.startsWith("ROLE_") ? rol : "ROLE_" + rol;
 
+            // Creamos la autenticación con el rol convertido a GrantedAuthority
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             userId.toString(),
@@ -109,6 +115,7 @@ public class JwtFilter extends OncePerRequestFilter {
                             List.of(new SimpleGrantedAuthority(authority))
                     );
 
+            // Colocamos la autenticación en el contexto de Spring Security
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             logger.info("[{}] Usuario autenticado: ID={}, Rol={}", requestId, userId, authority);
@@ -122,6 +129,7 @@ public class JwtFilter extends OncePerRequestFilter {
             return false;
         }
     }
+
 
     private void enviarError(HttpServletResponse response, int status, String message) {
         try {

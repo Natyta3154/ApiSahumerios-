@@ -130,15 +130,16 @@ public class UsuarioController {
             Usuarios u = usuario.get();
             String token = jwtUtil.generarToken(u.getId(), u.getRol());
 
-            // Crear cookie HttpOnly según entorno
+            // Crear cookie HttpOnly segura
             Cookie cookie = new Cookie("token", token);
             cookie.setHttpOnly(true);
             cookie.setSecure(!isDev()); // HTTPS solo en producción
             cookie.setPath("/");
             cookie.setMaxAge(3600); // 1 hora
+            cookie.setAttribute("SameSite", "Strict"); // evita CSRF en la mayoría de los casos
             response.addCookie(cookie);
 
-            // Retornar datos del usuario
+            // Retornar solo info del usuario (no el token)
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("usuario", Map.of(
                     "id", u.getId(),
@@ -146,16 +147,30 @@ public class UsuarioController {
                     "email", u.getEmail(),
                     "rol", u.getRol()
             ));
-            responseBody.put("token", token); // opcional si quieres retornar el token también
 
             return ResponseEntity.ok(responseBody);
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Credenciales inválidas");
+                    .body(Map.of("error", "Credenciales inválidas"));
         }
-
-
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("token", "");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(!isDev());
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // expira de inmediato
+        cookie.setAttribute("SameSite", "Strict");
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(Map.of("message", "Logout exitoso"));
+    }
+
+
+
+
     // ====== AQUÍ VA EL MÉTODO isDev ======
     private boolean isDev() {
         String profile = System.getProperty("spring.profiles.active", "dev");

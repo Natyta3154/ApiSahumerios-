@@ -1,10 +1,12 @@
 package com.example.AppSaumerios.config;
 
 import com.example.AppSaumerios.jwrFilter.JwtFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -17,14 +19,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
 @Configuration
+
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtFilter jwtFilterUtil;
-
-    // Constructor correctamente inicializado
-    public SecurityConfig(JwtFilter jwtFilterUtil) {
-        this.jwtFilterUtil = jwtFilterUtil;
-    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -51,7 +50,6 @@ public class SecurityConfig {
                                 "/detallePedidos/{pedidoId}",
                                 "/detallePedidos",
                                 "/api/webhook/**"
-
                         ).permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(
@@ -80,7 +78,7 @@ public class SecurityConfig {
                                 "/pedidos/realizarPedido",
                                 "/pedidos/realizarPedidoConPago",
                                 "/pedidos/**"
-                        ).hasAuthority("ROLE_USER")  // Cambiado de hasRole("USER") a hasAuthority("ROLE_USER")
+                        ).hasAuthority("ROLE_USER")
                         .requestMatchers("/api/pagos/**").hasAuthority("ROLE_USER")
                         .anyRequest().authenticated()
                 )
