@@ -1,5 +1,5 @@
 # ======================
-# Etapa 1: Compilación
+# Etapa 1: Build
 # ======================
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 
@@ -15,7 +15,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 
 # Compilamos el proyecto y generamos el JAR con nombre fijo 'app.jar'
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -DfinalName=app
 
 # ======================
 # Etapa 2: Runtime
@@ -27,7 +27,7 @@ WORKDIR /app
 # Copiamos el JAR compilado desde la etapa de build
 COPY --from=build /app/target/app.jar ./app.jar
 
-# Exponemos el puerto dinámico asignado por Render
+# Exponemos el puerto asignado por Render
 ENV PORT=8080
 EXPOSE $PORT
 
