@@ -139,7 +139,7 @@ public class UsuarioController {
 
             if (isDev()) {
                 cookie.setSecure(false);
-                cookie.setAttribute("SameSite", "Lax");
+                cookie.setAttribute("SameSite", "None");
             } else {
                 cookie.setSecure(true);
                 cookie.setAttribute("SameSite", "None");
