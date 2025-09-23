@@ -13,7 +13,7 @@ RUN mvn dependency:go-offline -B
 
 # Copiamos el código fuente
 COPY src ./src
-
+RUN mvn clean package -DskipTests
 # Compilamos el proyecto y generamos el JAR con nombre fijo 'app.jar'
 RUN mvn clean package -DskipTests -DfinalName=app
 
@@ -25,7 +25,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Copiamos el JAR compilado desde la etapa de build
-COPY --from=build /app/target/AppSahumerios.jar ./app.jar
+COPY --from=build /app/target/AppSaumerios.jar ./app.jar
 
 # Exponemos el puerto asignado por Render
 ENV PORT=8080
