@@ -9,6 +9,7 @@ import com.example.AppSaumerios.Service.UsuarioService;
 import com.example.AppSaumerios.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/pedidos")
 @CrossOrigin(origins = "http://localhost:9002")
 public class PedidosController {
+
+
+    @Value("${frontend.url.${spring.profiles.active}}")
+    private String frontendUrl;
+
 
     @Autowired
     private PedidoService pedidoService;

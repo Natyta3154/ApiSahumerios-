@@ -1,36 +1,36 @@
 package com.example.AppSaumerios.config;
 
+
 import com.example.AppSaumerios.jwrFilter.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-
 @Configuration
-
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtFilter jwtFilterUtil;
+    private final CorsConfigurationSource corsConfigSource; // inyecta el bean separado
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigSource)) // usa el bean de CorsConfig
+                .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -40,87 +40,30 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // OPTIONS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Públicos
                         .requestMatchers("/usuarios/registrar", "/usuarios/login").permitAll()
-                        .requestMatchers(
-                                "/productos/listado",
-                                "/productos/*",
-                                "/api/ofertas/listar",
-                                "/api/ofertas/con-precio",
-                                "/atributos/listado",
-                                "/detallePedidos/{pedidoId}",
-                                "/detallePedidos",
-                                "/api/webhook/**"
-                        ).permitAll()
+                        .requestMatchers("/productos/listado", "/productos/*", "/api/ofertas/listar", "/api/ofertas/con-precio").permitAll()
+                        // Admin
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(
-                                "/usuarios",
-                                "/usuarios/listaDeUser",
-                                "/usuarios/{id}",
-                                "/usuarios/agregarUser",
-                                "/usuarios/editarUser/{id}",
-                                "/usuarios/eliminarUser/{id}",
-                                "/productos/agregar",
-                                "/productos/editar/{id}",
-                                "/productos/eliminar/{id}",
-                                "/api/ofertas",
-                                "/api/ofertas/editar/{id}",
-                                "/api/ofertas/crearOferta",
-                                "/api/ofertas/eliminar/{id}",
-                                "/pedidos/admin",
-                                "/pedidos/{id}/estado",
-                                "/atributos",
-                                "/atributos/agregar",
-                                "/atributos/editar/{id}",
-                                "/atributos/eliminar/{id}",
+                                "/usuarios", "/usuarios/listaDeUser", "/usuarios/{id}", "/usuarios/agregarUser",
+                                "/usuarios/editarUser/{id}", "/usuarios/eliminarUser/{id}",
+                                "/productos/agregar", "/productos/editar/{id}", "/productos/eliminar/{id}",
+                                "/api/ofertas", "/api/ofertas/editar/{id}", "/api/ofertas/crearOferta", "/api/ofertas/eliminar/{id}",
+                                "/pedidos/admin", "/pedidos/{id}/estado",
+                                "/atributos", "/atributos/agregar", "/atributos/editar/{id}", "/atributos/eliminar/{id}",
                                 "/detallePedidos/admin/{id}"
                         ).hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(
-                                "/pedidos/realizarPedido",
-                                "/pedidos/realizarPedidoConPago",
-                                "/pedidos/**"
-                        ).hasAuthority("ROLE_USER")
-                        .requestMatchers("/api/pagos/**").hasAuthority("ROLE_USER")
+                        // Usuario normal
+                        .requestMatchers("/pedidos/realizarPedido", "/pedidos/realizarPedidoConPago", "/api/pagos/**").hasAuthority("ROLE_USER")
                         .anyRequest().authenticated()
                 )
+                // JWT Filter
                 .addFilterBefore(jwtFilterUtil, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:8080",
-                "http://localhost:9002",
-                "https://api-sahumerios.vercel.app",
-                "https://hernan.alwaysdata.net",
-                "https://apisahumerios.onrender.com",
-                "https://6000-firebase-studio-1756885120718.cluster-f73ibkkuije66wssuontdtbx6q.cloudworkstations.dev"
-        ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "X-Requested-With",
-                "Accept",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
-        ));
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Access-Control-Allow-Origin",
-                "Access-Control-Allow-Credentials"
-        ));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     @Bean
@@ -128,3 +71,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+

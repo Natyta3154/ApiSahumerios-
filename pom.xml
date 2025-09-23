@@ -1,99 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
+
 	<groupId>com.example</groupId>
 	<artifactId>AppSaumerios</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>AppSaumerios</name>
-	<description>Tienda venta de sahumerios y algo mas </description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<description>Tienda venta de sahumerios y algo mas</description>
+
 	<properties>
-		<!-- Configuración global de encoding -->
+		<java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>21</java.version>
 	</properties>
+
 	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-actuator</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
+		<!-- Spring Boot starters -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
-
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
-
-
-		<!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
 		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
-			<version>9.3.0</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- varible de entorno .env-->
-		<dependency>
-			<groupId>me.paulschwarz</groupId>
-			<artifactId>spring-dotenv</artifactId>
-			<version>3.0.0</version>
-		</dependency>
-
-
-		<!-- dependencias de token JWT -->
+		<!-- JWT -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -112,51 +66,48 @@
 			<scope>runtime</scope>
 		</dependency>
 
-
-			<!-- JWT -->
-			<dependency>
-				<groupId>io.jsonwebtoken</groupId>
-				<artifactId>jjwt-api</artifactId>
-				<version>0.11.5</version>
-			</dependency>
-			<dependency>
-				<groupId>io.jsonwebtoken</groupId>
-				<artifactId>jjwt-impl</artifactId>
-				<version>0.11.5</version>
-				<scope>runtime</scope>
-			</dependency>
-			<dependency>
-				<groupId>io.jsonwebtoken</groupId>
-				<artifactId>jjwt-jackson</artifactId>
-				<version>0.11.5</version>
-				<scope>runtime</scope>
-			</dependency>
-
-
-		<!-- jakarta validacion-->
+		<!-- Base de datos MySQL -->
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<version>9.3.0</version>
 		</dependency>
 
+		<!-- .env -->
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>3.0.0</version>
+		</dependency>
 
-		<!-- MERCADOPAGO -->
+		<!-- MercadoPago -->
 		<dependency>
 			<groupId>com.mercadopago</groupId>
 			<artifactId>sdk-java</artifactId>
 			<version>2.5.0</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
+		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>1.18.38</version>
+			<scope>provided</scope>
 		</dependency>
 
-
-
+		<!-- Testing -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
+
 	<build>
 		<resources>
 			<resource>
@@ -166,17 +117,18 @@
 		</resources>
 
 		<plugins>
-			<!-- Spring Boot Plugin -->
+			<!-- Spring Boot Plugin: genera jar ejecutable -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>3.5.5</version>
 				<configuration>
-					<!-- Nombre fijo del JAR -->
-					<finalName>app</finalName>
+					<finalName>AppSaumerios</finalName>
+					<mainClass>com.example.AppSaumerios.AppSaumeriosApplication</mainClass>
 				</configuration>
 			</plugin>
 
-			<!-- Resources Plugin para forzar UTF-8 -->
+			<!-- UTF-8 -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-resources-plugin</artifactId>
@@ -188,5 +140,13 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<profile>
+			<id>prod</id>
+			<properties>
+				<spring.profiles.active>prod</spring.profiles.active>
+			</properties>
+		</profile>
+	</profiles>
 
 </project>

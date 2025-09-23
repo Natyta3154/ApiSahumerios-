@@ -3,6 +3,7 @@ package com.example.AppSaumerios.Controller;
 import com.example.AppSaumerios.Service.OfertaService;
 import com.example.AppSaumerios.dto.OfertaDTO;
 import com.example.AppSaumerios.dto.ProductoOfertaDTO;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,10 @@ import java.util.List;
         "https://hernan.alwaysdata.net"
 })
 public class OfertaController {
+
+    @Value("${frontend.url.${spring.profiles.active}}")
+    private String frontendUrl;
+
 
     private final OfertaService ofertaService;
 

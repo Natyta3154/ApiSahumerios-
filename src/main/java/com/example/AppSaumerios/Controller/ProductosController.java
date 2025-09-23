@@ -15,6 +15,7 @@ import com.example.AppSaumerios.repository.FraganciaRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,10 @@ import java.util.*;
 @RestController
 @RequestMapping("/productos")
 public class ProductosController {
+
+    @Value("${frontend.url.${spring.profiles.active}}")
+    private String frontendUrl;
+
 
     @Autowired
     private ProductoService productoservice;

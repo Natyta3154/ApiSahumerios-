@@ -3,6 +3,7 @@ package com.example.AppSaumerios.Controller;
 import com.example.AppSaumerios.entity.Atributo;
 import com.example.AppSaumerios.Service.AtributoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,10 @@ import java.util.List;
 @RequestMapping("/atributos")
 @CrossOrigin(origins = "http://localhost:9002")
 public class AtributoController {
+
+    @Value("${frontend.url.${spring.profiles.active}}")
+    private String frontendUrl;
+
 
     @Autowired
     private AtributoService atributoService;
