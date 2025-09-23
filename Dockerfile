@@ -25,7 +25,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Copiamos el JAR compilado desde la etapa de build
-COPY --from=build /app/target/app.jar ./app.jar
+COPY --from=build /app/target/AppSahumerios.jar ./app.jar
 
 # Exponemos el puerto asignado por Render
 ENV PORT=8080
