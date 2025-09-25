@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/detallePedidos")
-@CrossOrigin(origins = "http://localhost:9002")
+@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
 public class DetallePedidoController {
 
 

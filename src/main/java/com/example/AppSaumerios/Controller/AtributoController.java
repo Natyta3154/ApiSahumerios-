@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/atributos")
-@CrossOrigin(origins = "http://localhost:9002")
+@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
 public class AtributoController {
 
     @Value("${frontend.url.${spring.profiles.active}}")

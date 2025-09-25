@@ -23,7 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@CrossOrigin(origins = "http://localhost:9002")
+
+@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
 @RestController
 @RequestMapping("/productos")
 public class ProductosController {

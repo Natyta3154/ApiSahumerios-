@@ -23,8 +23,11 @@ import java.util.*;
  * - Login devuelve URL de redirección según rol
  * ============================================
  */
+
+
 @RestController
 @RequestMapping("/usuarios")
+@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
 public class UsuarioController {
 
     @Value("${frontend.url.${spring.profiles.active}}")

@@ -9,15 +9,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
 @RestController
 @RequestMapping("/api/ofertas")
-@CrossOrigin(origins = {
-        "http://localhost:9002",
-        "http://localhost:3000",
-        "https://api-sahumerios.vercel.app",
-        "https://hernan.alwaysdata.net"
-})
+
 public class OfertaController {
 
     @Value("${frontend.url.${spring.profiles.active}}")
