@@ -5,18 +5,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * ============================================
- * Configuración CORS para permitir requests
- * desde frontend externo (React/HTML).
- * ============================================
- */
 @Configuration
 public class CorsConfig {
 
@@ -26,12 +18,13 @@ public class CorsConfig {
 
         String profile = System.getProperty("spring.profiles.active", "dev");
         if ("prod".equals(profile)) {
+            // URL real de Vercel
             configuration.setAllowedOrigins(List.of(
-                    "https://front-sahumerios-2.vercel.app"
+                    "https://front-sahumerios-2-brlq08iwe-hernans-projects-a6864d17.vercel.app"
             ));
         } else {
+            // URLs de desarrollo
             configuration.setAllowedOrigins(Arrays.asList(
-                    "http://localhost:3000",
                     "http://localhost:9002"
             ));
         }
@@ -47,12 +40,11 @@ public class CorsConfig {
                 "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true); // importante para cookies
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 }
