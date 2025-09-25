@@ -20,7 +20,7 @@ public class CorsConfig {
         if ("prod".equals(profile)) {
             // URL real de Vercel
             configuration.setAllowedOrigins(List.of(
-                    "https://front-sahumerios-2-brlq08iwe-hernans-projects-a6864d17.vercel.app"
+                    "https://front-sahumerios-2.vercel.app"
             ));
         } else {
             // URLs de desarrollo
