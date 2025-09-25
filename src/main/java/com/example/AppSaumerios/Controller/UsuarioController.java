@@ -149,7 +149,7 @@ public class UsuarioController {
 
             // Determinar URL de redirección según rol
             String redirectUrl;
-            if ("ROLE_ADMIN".equalsIgnoreCase(u.getRol())) {
+            if ("ADMIN".equalsIgnoreCase(u.getRol())) {
                 redirectUrl = "/admin/dashboard";
             } else {
                 redirectUrl = "/productos/listado";
