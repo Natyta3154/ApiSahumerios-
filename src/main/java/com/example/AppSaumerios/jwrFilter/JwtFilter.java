@@ -36,31 +36,18 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // ✅ 1. PERMITIR PETICIONES OPTIONS (PREFLIGHT CORS) - ESTO ES CLAVE
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         final String requestId = UUID.randomUUID().toString();
-        logger.debug("[{}] Procesando request: {}", requestId, request.getRequestURI());
+        logger.debug("[{}] Procesando request: {} {}", requestId, request.getMethod(), request.getRequestURI());
 
         try {
-            // ✅ 2. Si es un endpoint público (definido en shouldNotFilter), continuar sin autenticación
-            if (shouldNotFilter(request)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
             String token = extraerToken(request);
 
             if (token != null) {
                 if (!validarYConfigurarAutenticacion(token, response, requestId)) {
-                    return; // Error ya manejado
+                    return; // error ya enviado al cliente
                 }
             } else {
                 logger.debug("[{}] No se encontró token JWT para endpoint protegido", requestId);
-                // ✅ 3. Para endpoints protegidos sin token, enviar error 401
                 enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token requerido");
                 return;
             }
@@ -74,22 +61,22 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String extraerToken(HttpServletRequest request) {
-        // ✅ 1. Primero verificar el header Authorization (estándar)
+        // Header Authorization
         String authHeader = request.getHeader(AUTH_HEADER);
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             String token = authHeader.substring(BEARER_PREFIX.length()).trim();
-            if (!token.isEmpty() && token.length() <= MAX_TOKEN_LENGTH && !token.equalsIgnoreCase("null")) {
+            if (!token.isEmpty() && token.length() <= MAX_TOKEN_LENGTH && !"null".equalsIgnoreCase(token)) {
                 logger.debug("Token encontrado en Authorization header");
                 return token;
             }
         }
 
-        // ✅ 2. Fallback: verificar cookies (si usas cookies)
+        // Fallback: cookie
         if (request.getCookies() != null) {
             for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
                 if ("token".equals(cookie.getName())) {
                     String token = cookie.getValue();
-                    if (token != null && !token.isBlank() && token.length() <= MAX_TOKEN_LENGTH && !token.equalsIgnoreCase("null")) {
+                    if (token != null && !token.isBlank() && token.length() <= MAX_TOKEN_LENGTH && !"null".equalsIgnoreCase(token)) {
                         logger.debug("Token encontrado en cookie");
                         return token.trim();
                     }
@@ -103,34 +90,28 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private boolean validarYConfigurarAutenticacion(String token, HttpServletResponse response, String requestId) {
         try {
-            // ✅ Validar formato básico del token
             if (token == null || token.trim().isEmpty()) {
                 enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token vacío");
                 return false;
             }
 
-            // ✅ Obtenemos el ID y el rol del usuario desde el token JWT
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
             String rol = jwtUtil.obtenerRolDesdeToken(token);
 
-            // ✅ Validar que el token tenga la info necesaria
             if (userId == null || rol == null || rol.isBlank()) {
                 enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token con información incompleta");
                 return false;
             }
 
-            // ✅ Aseguramos que el rol tenga el formato correcto para Spring Security
             String authority = rol.startsWith("ROLE_") ? rol : "ROLE_" + rol.toUpperCase();
 
-            // ✅ Creamos la autenticación
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                            userId.toString(), // principal
-                            null, // credentials
-                            List.of(new SimpleGrantedAuthority(authority)) // authorities
+                            userId.toString(),
+                            null,
+                            List.of(new SimpleGrantedAuthority(authority))
                     );
 
-            // ✅ Establecemos la autenticación en el contexto de seguridad
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             logger.info("[{}] Usuario autenticado: ID={}, Rol={}", requestId, userId, authority);
@@ -174,17 +155,24 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // ✅ Permitir OPTIONS para todas las rutas (esto ya se maneja al inicio)
+        // ✅ Siempre permitir preflight
         if ("OPTIONS".equalsIgnoreCase(method)) {
+            logger.debug("Preflight OPTIONS permitido: {}", path);
             return true;
         }
 
-        // ✅ Endpoints públicos que no requieren autenticación
-        return path.equals("/usuarios/registrar") ||
-                path.equals("/usuarios/login") ||
-                path.equals("/productos/listado") ||
-                path.startsWith("/productos/") || // Permite /productos/1, /productos/2, etc.
-                path.equals("/api/ofertas/listar") ||
+        // ✅ Endpoints públicos
+        if (path.equals("/usuarios/registrar") || path.equals("/usuarios/login")) {
+            return true;
+        }
+
+        // ✅ Solo GET de productos públicos
+        if ("GET".equalsIgnoreCase(method) && (path.equals("/productos/listado") || path.startsWith("/productos/"))) {
+            return true;
+        }
+
+        // ✅ Ofertas y atributos públicos
+        return path.equals("/api/ofertas/listar") ||
                 path.startsWith("/api/ofertas/con-precio") ||
                 path.equals("/atributos/listado");
     }

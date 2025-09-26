@@ -41,11 +41,7 @@ public class UsuarioController {
         this.jwtUtil = jwtUtil;
     }
 
-    // ===================== MÉTODO AUXILIAR =====================
-    private boolean isDev() {
-        String profile = System.getProperty("spring.profiles.active", "dev");
-        return profile.equals("dev");
-    }
+
 
     // ===================== ADMIN =====================
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -123,58 +119,11 @@ public class UsuarioController {
         }
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
-        Optional<Usuarios> usuario = usuarioService.login(
-                credenciales.getEmail(),
-                credenciales.getPassword()
-        );
 
-        if (usuario.isPresent()) {
-            Usuarios u = usuario.get();
-            String token = jwtUtil.generarToken(u.getId(), u.getRol());
-
-            // Crear cookie HttpOnly
-            Cookie cookie = new Cookie("token", token);
-            cookie.setHttpOnly(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(2 * 60 * 60); // 2 horas
-
-            if (isDev()) {
-                cookie.setSecure(false);
-                cookie.setAttribute("SameSite", "None");
-            } else {
-                cookie.setSecure(true);
-                cookie.setAttribute("SameSite", "None");
-            }
-
-            response.addCookie(cookie);
-
-            // Determinar URL de redirección según rol
-            String redirectUrl;
-            if ("ADMIN".equalsIgnoreCase(u.getRol())) {
-                redirectUrl = "/admin/dashboard";
-            } else {
-                redirectUrl = "/productos/listado";
-            }
-
-            // Retornar info del usuario + URL de redirección
-            Map<String, Object> responseBody = Map.of(
-                    "usuario", Map.of(
-                            "id", u.getId(),
-                            "nombre", u.getNombre(),
-                            "email", u.getEmail(),
-                            "rol", u.getRol()
-                    ),
-                    "redirect", redirectUrl
-            );
-
-            return ResponseEntity.ok(responseBody);
-
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Credenciales inválidas"));
-        }
+    // ===================== MÉTODO AUXILIAR =====================
+    private boolean isDev() {
+        String profile = System.getProperty("spring.profiles.active", "dev");
+        return profile.equals("dev");
     }
 
     @PostMapping("/logout")
