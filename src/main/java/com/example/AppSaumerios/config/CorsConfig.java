@@ -1,5 +1,6 @@
-package com.example.AppSaumerios.config;
 
+
+package com.example.AppSaumerios.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -19,7 +20,7 @@ public class CorsConfig {
         String profile = System.getProperty("spring.profiles.active", "dev");
         if ("prod".equals(profile)) {
             // URL real de Vercel
-            configuration.setAllowedOrigins(List.of(
+            configuration.setAllowedOriginPatterns(List.of(
                     "https://front-sahumerios-2.vercel.app"
             ));
         } else {
@@ -40,7 +41,7 @@ public class CorsConfig {
                 "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true); // importante para cookies
+        configuration.setAllowCredentials(true); // clave para cookies HttpOnly
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
