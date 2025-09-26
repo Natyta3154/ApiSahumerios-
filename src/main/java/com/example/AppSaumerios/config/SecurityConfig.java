@@ -1,6 +1,5 @@
 package com.example.AppSaumerios.config;
 
-
 import com.example.AppSaumerios.jwrFilter.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -13,24 +12,22 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtFilter jwtFilterUtil;
-    private final CorsConfigurationSource corsConfigSource; // inyecta el bean separado
+    private final CorsConfigurationSource corsConfigSource;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigSource)) // usa el bean de CorsConfig
-                .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                .cors(cors -> cors.configurationSource(corsConfigSource))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -40,10 +37,10 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // OPTIONS preflight
+                        // Preflight CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Públicos
-                        .requestMatchers("/usuarios/registrar", "/usuarios/login").permitAll()
+                        // Rutas públicas
+                        .requestMatchers("/", "/favicon.ico", "/usuarios/registrar", "/usuarios/login", "/usuarios/perfil").permitAll()
                         .requestMatchers("/productos/listado", "/productos/*", "/api/ofertas/listar", "/api/ofertas/con-precio").permitAll()
                         // Admin
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
@@ -58,6 +55,7 @@ public class SecurityConfig {
                         ).hasAuthority("ROLE_ADMIN")
                         // Usuario normal
                         .requestMatchers("/pedidos/realizarPedido", "/pedidos/realizarPedidoConPago", "/api/pagos/**").hasAuthority("ROLE_USER")
+                        // Cualquier otra ruta requiere autenticación
                         .anyRequest().authenticated()
                 )
                 // JWT Filter
@@ -71,4 +69,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-
