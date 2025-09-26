@@ -21,7 +21,7 @@ public class CorsConfig {
         if ("prod".equals(profile)) {
             // URL real de Vercel
             configuration.setAllowedOriginPatterns(List.of(
-                    "https://front-sahumerios-2.vercel.app"
+                    "https://front-sahumerios-2.vercel.app",
                     "https://6000-firebase-studio-1758861612535.cluster-l2bgochoazbomqgfmlhuvdvgiy.cloudworkstations.dev\n" +
                             "\n"
             ));
