@@ -18,22 +18,27 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         String profile = System.getProperty("spring.profiles.active", "dev");
+
         if ("prod".equals(profile)) {
-            // URL real de Vercel
+            // URLs reales de producción
             configuration.setAllowedOriginPatterns(List.of(
                     "https://front-sahumerios-2.vercel.app",
-                    "https://6000-firebase-studio-1758861612535.cluster-l2bgochoazbomqgfmlhuvdvgiy.cloudworkstations.dev\n" +
-                            "\n"
+                    "https://6000-firebase-studio-1758861612535.cluster-l2bgochoazbomqgfmlhuvdvgiy.cloudworkstations.dev"
             ));
         } else {
             // URLs de desarrollo
-            configuration.setAllowedOrigins(Arrays.asList(
+            configuration.setAllowedOrigins(List.of(
                     "http://localhost:9002"
             ));
         }
 
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList(
+// Métodos permitidos
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        ));
+
+// Headers permitidos
+        configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
                 "X-Requested-With",
@@ -42,6 +47,10 @@ public class CorsConfig {
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers"
         ));
+
+// Permite enviar cookies
+        configuration.setAllowCredentials(true);
+
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true); // clave para cookies HttpOnly
         configuration.setMaxAge(3600L);
