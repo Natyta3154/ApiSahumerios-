@@ -7,12 +7,15 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.*;
 
 /**
@@ -137,31 +140,22 @@ public class UsuarioController {
             Usuarios u = usuario.get();
             String token = jwtUtil.generarToken(u.getId(), u.getRol());
 
-            // Crear cookie HttpOnly
-            Cookie cookie = new Cookie("token", token);
-            cookie.setHttpOnly(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(2 * 60 * 60); // 2 horas
+            // ✅ Crear cookie segura con ResponseCookie
+            ResponseCookie cookie = ResponseCookie.from("token", token)
+                    .httpOnly(true)
+                    .secure(!isDev())                         // Secure solo en prod
+                    .sameSite(isDev() ? "Lax" : "None")       // Lax en dev, None en prod
+                    .path("/")
+                    .maxAge(Duration.ofHours(2))              // expira en 2 horas
+                    .build();
 
-            if (isDev()) {
-                cookie.setSecure(false);
-                cookie.setAttribute("SameSite", "None");
-            } else {
-                cookie.setSecure(true);
-                cookie.setAttribute("SameSite", "None");
-            }
-
-            response.addCookie(cookie);
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
             // Determinar URL de redirección según rol
-            String redirectUrl;
-            if ("ADMIN".equalsIgnoreCase(u.getRol())) {
-                redirectUrl = "/admin/dashboard";
-            } else {
-                redirectUrl = "/productos/listado";
-            }
+            String redirectUrl = "ADMIN".equalsIgnoreCase(u.getRol())
+                    ? "/admin/dashboard"
+                    : "/productos/listado";
 
-            // Retornar info del usuario + URL de redirección
             Map<String, Object> responseBody = Map.of(
                     "usuario", Map.of(
                             "id", u.getId(),
@@ -182,13 +176,16 @@ public class UsuarioController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("token", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(!isDev());
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        cookie.setAttribute("SameSite", isDev() ? "Strict" : "None");
-        response.addCookie(cookie);
+        // ✅ Borra la cookie correctamente
+        ResponseCookie cookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(!isDev())
+                .sameSite(isDev() ? "Lax" : "None")
+                .path("/")
+                .maxAge(0) // expira inmediatamente
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok(Map.of("message", "Logout exitoso"));
     }
@@ -202,12 +199,14 @@ public class UsuarioController {
         try {
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
             Usuarios usuario = usuarioService.buscarPorId(userId);
+
             Map<String, Object> userSafe = Map.of(
                     "id", usuario.getId(),
                     "nombre", usuario.getNombre(),
                     "email", usuario.getEmail(),
                     "rol", usuario.getRol()
             );
+
             return ResponseEntity.ok(Map.of("usuario", userSafe));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
