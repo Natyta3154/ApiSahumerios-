@@ -30,7 +30,10 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/usuarios")
-@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
+@CrossOrigin(
+        origins = {"https://front-sahumerios-2.vercel.app", "http://localhost:9002"},
+        allowCredentials = "true"
+)
 public class UsuarioController {
 
     @Value("${frontend.url.${spring.profiles.active}}")
