@@ -153,7 +153,7 @@ public class UsuarioController {
 
             // Determinar URL de redirección según rol
             String redirectUrl = "ADMIN".equalsIgnoreCase(u.getRol())
-                    ? "/admin/dashboard"
+                    ? "/admin"
                     : "/productos/listado";
 
             Map<String, Object> responseBody = Map.of(
