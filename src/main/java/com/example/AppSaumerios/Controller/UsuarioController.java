@@ -69,12 +69,12 @@ public class UsuarioController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         // 🔹 Redirección según rol
-        String redirectUrl;
+       /* String redirectUrl;
         if ("ADMIN".equalsIgnoreCase(usuario.getRol())) {
             redirectUrl = "/admin";
         } else {
             redirectUrl = "/productos";
-        }
+        }*/
 
 
         Map<String, Object> responseBody = Map.of(
@@ -83,8 +83,8 @@ public class UsuarioController {
                         "nombre", usuario.getNombre(),
                         "email", usuario.getEmail(),
                         "rol", usuario.getRol()
-                ),
-                "redirect", redirectUrl
+                )
+                //"redirect", redirectUrl
         );
 
         return ResponseEntity.ok(responseBody);
