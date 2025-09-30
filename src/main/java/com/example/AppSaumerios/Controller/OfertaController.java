@@ -9,7 +9,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
+@CrossOrigin(
+        origins = {
+                "http://localhost:9002",
+                "https://front-sahumerios-2.vercel.app",
+                "https://app-sahumerio3.vercel.app" // tu dominio de producción
+        },
+        allowCredentials = "true"
+)
 @RestController
 @RequestMapping("/api/ofertas")
 
