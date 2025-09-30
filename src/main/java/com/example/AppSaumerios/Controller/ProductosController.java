@@ -24,9 +24,17 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 
-@CrossOrigin(origins = "https://front-sahumerios-2.vercel.app")
+
 @RestController
 @RequestMapping("/productos")
+@CrossOrigin(
+        origins = {
+                "http://localhost:9002",
+                "https://front-sahumerios-2.vercel.app",
+                "https://app-sahumerio3.vercel.app" // tu dominio de producción
+        },
+        allowCredentials = "true"
+)
 public class ProductosController {
 
     @Value("${frontend.url.${spring.profiles.active}}")
