@@ -3,10 +3,10 @@ package com.example.AppSaumerios.Controller;
 import com.example.AppSaumerios.Service.UsuarioService;
 import com.example.AppSaumerios.entity.Usuarios;
 import com.example.AppSaumerios.util.JwtUtil;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -18,26 +18,19 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Duration;
 import java.util.*;
 
-/**
- * ============================================
- * Controlador REST para usuarios.
- * - CRUD para admin
- * - Registro y login para usuarios comunes
- * - Login devuelve URL de redirección según rol
- * ============================================
- */
-
-
 @RestController
 @RequestMapping("/usuarios")
 @CrossOrigin(
-        origins = {"https://front-sahumerios-2.vercel.app", "http://localhost:9002"},
+        origins = {
+                "http://localhost:9002",
+                "https://front-sahumerios-2.vercel.app",
+                "https://app-sahumerio3.vercel.app" // tu dominio de producción
+        },
         allowCredentials = "true"
 )
 public class UsuarioController {
 
-    @Value("${frontend.url.${spring.profiles.active}}")
-    private String frontendUrl;
+    private static final Logger logger = LoggerFactory.getLogger(UsuarioController.class);
 
     private final UsuarioService usuarioService;
     private final JwtUtil jwtUtil;
@@ -47,152 +40,70 @@ public class UsuarioController {
         this.jwtUtil = jwtUtil;
     }
 
-
-
-    // ===================== ADMIN =====================
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @GetMapping("/listaDeUser")
-    public ResponseEntity<List<Usuarios>> obtenerUsuarios() {
-        return ResponseEntity.ok(usuarioService.obtenerUsuarios());
-    }
-
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerUsuarioPorId(@PathVariable Long id) {
-        Optional<Usuarios> usuarioOpt = usuarioService.obtenerUsuarioPorId(id);
-        return usuarioOpt
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Usuario no encontrado"));
-    }
-
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @PostMapping("/agregarUser")
-    public ResponseEntity<?> agregarUsuario(@RequestBody Usuarios nuevoUsuario) {
-        try {
-            Usuarios usuarioCreado = usuarioService.guardar(nuevoUsuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body(usuarioCreado);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @PutMapping("/editarUser/{id}")
-    public ResponseEntity<?> actualizarUsuario(@PathVariable Long id,
-                                               @RequestBody Usuarios usuarioActualizado) {
-        try {
-            return ResponseEntity.ok(usuarioService.actualizar(id, usuarioActualizado));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @DeleteMapping("/eliminarUser/{id}")
-    public ResponseEntity<?> eliminarUsuario(@PathVariable Long id) {
-        usuarioService.eliminar(id);
-        return ResponseEntity.ok("Usuario eliminado correctamente");
-    }
-
-    // ===================== USUARIO COMÚN =====================
-    @PostMapping("/registrar")
-    public ResponseEntity<?> registrar(@Valid @RequestBody Usuarios nuevoUsuario, BindingResult result) {
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().body(
-                    Map.of(
-                            "mensaje", "Error de validación",
-                            "errores", result.getAllErrors()
-                                    .stream()
-                                    .map(err -> err.getDefaultMessage())
-                                    .toList()
-                    )
-            );
-        }
-
-        try {
-            nuevoUsuario.setRol("ROLE_USER"); // rol por defecto
-            Usuarios usuarioCreado = usuarioService.guardar(nuevoUsuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "mensaje", "Usuario registrado correctamente.",
-                    "usuario", usuarioCreado
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "mensaje", "Error al registrar el usuario",
-                    "error", e.getMessage()
-            ));
-        }
-    }
-
-
-    // ===================== MÉTODO AUXILIAR =====================
-    private boolean isDev() {
-        String profile = System.getProperty("spring.profiles.active", "dev");
-        return profile.equals("dev");
-    }
-
+    // ===================== LOGIN =====================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
-        Optional<Usuarios> usuario = usuarioService.login(
+        Optional<Usuarios> usuarioOpt = usuarioService.login(
                 credenciales.getEmail(),
                 credenciales.getPassword()
         );
 
-        if (usuario.isPresent()) {
-            Usuarios u = usuario.get();
-            String token = jwtUtil.generarToken(u.getId(), u.getRol());
-
-            // ✅ Crear cookie segura con ResponseCookie
-            ResponseCookie cookie = ResponseCookie.from("token", token)
-                    .httpOnly(true)
-                    .secure(!isDev())                         // Secure solo en prod
-                    .sameSite(isDev() ? "Lax" : "None")       // Lax en dev, None en prod
-                    .path("/")
-                    .maxAge(Duration.ofHours(2))              // expira en 2 horas
-                    .build();
-
-            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
-            // Determinar URL de redirección según rol
-            String redirectUrl = "ADMIN".equalsIgnoreCase(u.getRol())
-                    ? "/admin"
-                    : "/productos/listado";
-
-            Map<String, Object> responseBody = Map.of(
-                    "usuario", Map.of(
-                            "id", u.getId(),
-                            "nombre", u.getNombre(),
-                            "email", u.getEmail(),
-                            "rol", u.getRol()
-                    ),
-                    "redirect", redirectUrl
-            );
-
-            return ResponseEntity.ok(responseBody);
-
-        } else {
+        if (usuarioOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Credenciales inválidas"));
         }
-    }
 
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
-        // ✅ Borra la cookie correctamente
-        ResponseCookie cookie = ResponseCookie.from("token", "")
+        Usuarios usuario = usuarioOpt.get();
+        String token = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
+
+        // 🔹 Cookie para producción cross-site
+        ResponseCookie cookie = ResponseCookie.from("token", token)
                 .httpOnly(true)
-                .secure(!isDev())
-                .sameSite(isDev() ? "Lax" : "None")
+                .secure(true)              // obligatorio en producción HTTPS
+                .sameSite("None")          // necesario para cross-site
                 .path("/")
-                .maxAge(0) // expira inmediatamente
+                .maxAge(Duration.ofHours(2))
                 .build();
 
+        logger.info("SET-COOKIE HEADER: {}", cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        // 🔹 Redirección según rol
+        String redirectUrl = usuario.getRol().equalsIgnoreCase("ROLE_ADMIN")
+                ? "/admin"
+                : "/productos";
+
+        Map<String, Object> responseBody = Map.of(
+                "usuario", Map.of(
+                        "id", usuario.getId(),
+                        "nombre", usuario.getNombre(),
+                        "email", usuario.getEmail(),
+                        "rol", usuario.getRol()
+                ),
+                "redirect", redirectUrl
+        );
+
+        return ResponseEntity.ok(responseBody);
+    }
+
+    // ===================== LOGOUT =====================
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(true)           // obligatorio en prod
+                .sameSite("None")       // cross-site
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        logger.info("LOGOUT - DELETE COOKIE: {}", cookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok(Map.of("message", "Logout exitoso"));
     }
 
+    // ===================== PERFIL =====================
     @GetMapping("/perfil")
     public ResponseEntity<?> perfil(@CookieValue(value = "token", required = false) String token) {
         if (token == null) {
@@ -214,5 +125,25 @@ public class UsuarioController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
         }
+    }
+
+    // ===================== ADMIN =====================
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @GetMapping("/listaDeUser")
+    public ResponseEntity<List<Usuarios>> obtenerUsuarios() {
+        return ResponseEntity.ok(usuarioService.obtenerUsuarios());
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @DeleteMapping("/eliminarUser/{id}")
+    public ResponseEntity<?> eliminarUsuario(@PathVariable Long id) {
+        usuarioService.eliminar(id);
+        return ResponseEntity.ok("Usuario eliminado correctamente");
+    }
+
+    // ===================== UTIL =====================
+    private boolean isDev() {
+        String profile = System.getProperty("spring.profiles.active", "dev");
+        return profile.equals("dev");
     }
 }

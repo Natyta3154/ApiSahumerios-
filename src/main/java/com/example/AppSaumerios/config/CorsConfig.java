@@ -20,7 +20,7 @@ public class CorsConfig {
         String profile = System.getProperty("spring.profiles.active", "dev");
 
         if ("prod".equals(profile)) {
-            // URLs reales de producción
+            //  reales de producción
             configuration.setAllowedOriginPatterns(List.of(
                     "https://front-sahumerios-2.vercel.app",
                     "https://6000-firebase-studio-1758861612535.cluster-l2bgochoazbomqgfmlhuvdvgiy.cloudworkstations.dev"
