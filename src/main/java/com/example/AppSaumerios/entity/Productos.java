@@ -3,14 +3,15 @@ package com.example.AppSaumerios.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+import org.apache.commons.collections4.list.LazyList;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -24,20 +25,20 @@ public class Productos {
     @Column(name = "total_ingresado")
     private Integer totalIngresado = 0;
 
-    @NotBlank(message = "El nombre es obligatorio")
-    @Size(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres")
+    @NotBlank
+    @Size(min = 2, max = 100)
     @Column(unique = true)
     private String nombre;
 
     private String descripcion;
 
-    @DecimalMin(value = "0.0", inclusive = false, message = "El precio debe ser mayor a 0")
+    @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal precio;
 
     @Column(name = "precio_mayorista", precision = 10, scale = 2, nullable = false)
     private BigDecimal precioMayorista;
 
-    @Min(value = 0, message = "El stock no puede ser negativo")
+    @Min(0)
     private Integer stock;
 
     @Column(name = "categoria_id")
@@ -47,96 +48,98 @@ public class Productos {
     private String imagenUrl;
 
     @Column(name = "fecha_creacion")
-    private LocalDateTime fechaCreacion;
+    private LocalDateTime fechaCreacion = LocalDateTime.now();
 
     @Column(nullable = false)
     private Boolean activo = true;
 
-    // ======================
-    // Relación con atributos
-    // ======================
-    @Transient
-    public List<Map<String, String>> getAtributos() {
-        List<Map<String, String>> list = new ArrayList<>();
-        for (ProductoAtributo pa : this.productoAtributos) {
-            Map<String, String> map = new HashMap<>();
-            map.put("nombre", pa.getAtributo().getNombre());
-            map.put("valor", pa.getValor());
-            list.add(map);
-        }
-        return list;
-    }
+    @Column(nullable = false)
+    private Boolean destacado = false;
 
-    @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
+
+    // ======================
+    // RELACIONES
+    // ======================
+
+    // Atributos del producto
+    @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
-    private Set<ProductoAtributo> productoAtributos = new HashSet<>();
+    private List<ProductoAtributo> productoAtributos = new ArrayList<>();
 
-    // ======================
-    // Relación con categoría
-    // ======================
+    // Categoría
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id", insertable = false, updatable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Categoria categoria;
 
-    // ======================
-    // Relación con fragancias
-    // ======================
+    // Fragancias
     @ManyToMany
     @JoinTable(
             name = "producto_fragancia",
             joinColumns = @JoinColumn(name = "producto_id"),
             inverseJoinColumns = @JoinColumn(name = "fragancia_id")
     )
+
+    @OrderBy("nombre ASC")
     @JsonManagedReference
+    @Fetch(FetchMode.SUBSELECT)
     private List<Fragancia> fragancias = new ArrayList<>();
 
-    // ======================
-    // Relación con ofertas
-    // ======================
+    // Ofertas
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
+    @Fetch(FetchMode.SUBSELECT)
     private List<Ofertas> ofertas = new ArrayList<>();
 
+    // DetallePedidos
+    @OneToMany(mappedBy = "producto", fetch = FetchType.LAZY)
+    private List<DetallePedido> detallePedidos = new ArrayList<>();
+
+    // ======================
+    // MÉTODOS AUXILIARES
+    // ======================
+
+    @Transient
+    public List<Map<String, String>> getAtributos() {
+        return productoAtributos.stream()
+                .map(pa -> Map.of(
+                        "nombre", pa.getAtributo().getNombre(),
+                        "valor", pa.getValor()
+                ))
+                .collect(Collectors.toList());
+    }
 
     public void addAtributo(Atributo atributo, String valor) {
         ProductoAtributo pa = new ProductoAtributo(this, atributo, valor);
         this.productoAtributos.add(pa);
     }
 
-
-
-    @OneToMany(mappedBy = "producto")
-    private List<DetallePedido> detallePedidos = new ArrayList<>();
-
-    // Getter
-    public List<DetallePedido> getDetallePedidos() {
-        return detallePedidos;
+    public String getCategoriaNombre() {
+        return categoria != null ? categoria.getNombre() : null;
     }
 
     // ======================
-    // Constructores
+    // CONSTRUCTORES
     // ======================
     public Productos() {}
 
-    public Productos(Long id, Integer totalIngresado, String nombre, String descripcion,
-                     BigDecimal precio, BigDecimal precioMayorista, Integer stock,
-                     Long idCategoria, String imagenUrl, LocalDateTime fechaCreacion, Boolean activo) {
+    public Productos(Long id, String nombre, String descripcion, BigDecimal precio,
+                     BigDecimal precioMayorista, Integer stock, Long idCategoria,
+                     String imagenUrl, Boolean activo, Integer totalIngresado) {
         this.id = id;
-        this.totalIngresado = totalIngresado;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.precio = precio;
-        this.precioMayorista = (precioMayorista != null) ? precioMayorista : BigDecimal.ZERO;
+        this.precioMayorista = precioMayorista != null ? precioMayorista : BigDecimal.ZERO;
         this.stock = stock;
         this.idCategoria = idCategoria;
         this.imagenUrl = imagenUrl;
-        this.fechaCreacion = fechaCreacion;
-        this.activo = activo;
+        this.activo = activo != null ? activo : true;
+        this.totalIngresado = totalIngresado != null ? totalIngresado : 0;
+        this.fechaCreacion = LocalDateTime.now();
     }
 
     // ======================
-    // Getters y Setters
+    // GETTERS Y SETTERS
     // ======================
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -155,7 +158,7 @@ public class Productos {
 
     public BigDecimal getPrecioMayorista() { return precioMayorista; }
     public void setPrecioMayorista(BigDecimal precioMayorista) {
-        this.precioMayorista = (precioMayorista != null) ? precioMayorista : BigDecimal.ZERO;
+        this.precioMayorista = precioMayorista != null ? precioMayorista : BigDecimal.ZERO;
     }
 
     public Integer getStock() { return stock; }
@@ -173,8 +176,8 @@ public class Productos {
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
 
-    public Set<ProductoAtributo> getProductoAtributos() { return productoAtributos; }
-    public void setProductoAtributos(Set<ProductoAtributo> productoAtributos) { this.productoAtributos = productoAtributos; }
+    public List<ProductoAtributo> getProductoAtributos() { return productoAtributos; }
+    public void setProductoAtributos(List<ProductoAtributo> productoAtributos) { this.productoAtributos = productoAtributos; }
 
     public Categoria getCategoria() { return categoria; }
     public void setCategoria(Categoria categoria) { this.categoria = categoria; }
@@ -185,9 +188,17 @@ public class Productos {
     public List<Ofertas> getOfertas() { return ofertas; }
     public void setOfertas(List<Ofertas> ofertas) { this.ofertas = ofertas; }
 
-    public String getCategoriaNombre() {
-        return categoria != null ? categoria.getNombre() : null;
+    public List<DetallePedido> getDetallePedidos() { return detallePedidos; }
+    public void setDetallePedidos(List<DetallePedido> detallePedidos) { this.detallePedidos = detallePedidos; }
+
+    public Boolean getDestacado() {
+        return destacado;
     }
+
+    public void setDestacado(Boolean destacado) {
+        this.destacado = destacado;
+    }
+
 
     @Override
     public String toString() {

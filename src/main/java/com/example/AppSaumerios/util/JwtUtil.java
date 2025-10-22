@@ -65,7 +65,7 @@ public class JwtUtil {
     }
 
     /**
-     * Valida si el token sigue siendo válido (no expirado)
+     *Valida si el token sigue siendo válido (no expirado)
      */
     public boolean validarToken(String token) {
         try {

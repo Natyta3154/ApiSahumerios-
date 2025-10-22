@@ -76,24 +76,30 @@ public class PedidosController {
         try {
             Usuarios usuario = obtenerUsuarioDesdeToken(request);
             crearPedidoRequestDTO.setUsuarioId(usuario.getId());
+
             Pedidos pedido = pedidoService.crearPedido(crearPedidoRequestDTO);
-            String preferenciaId = mercadoPagoService.crearPreferenciaPago(pedido);
+
+            // 🔹 Este método ahora debe devolver la URL completa de pago (init_point)
+            String initPoint = mercadoPagoService.crearPreferenciaPago(pedido);
 
             List<DetallePedidoResponseDTO> detallesDTO = pedido.getDetalles().stream()
                     .map(pedidoService::convertirADTO)
                     .collect(Collectors.toList());
 
-            CrearPedidoResponseDTO response = new CrearPedidoResponseDTO(
-                    pedido.getId(),
-                    preferenciaId,
-                    detallesDTO
-            );
+            // 🔹 devolvemos la URL en un JSON simple y claro
+            Map<String, Object> response = new HashMap<>();
+            response.put("pedidoId", pedido.getId());
+            response.put("init_point", initPoint);
+            response.put("detalles", detallesDTO);
 
             return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
 
     // =========================
     // Obtener pedidos del usuario logueado
@@ -194,6 +200,7 @@ public class PedidosController {
     // Helper: obtener usuario desde JWT
     // =========================
     private Usuarios obtenerUsuarioDesdeToken(HttpServletRequest request) {
+        // Revisar header Authorization
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
@@ -201,6 +208,20 @@ public class PedidosController {
             return usuarioService.obtenerUsuarioPorId(usuarioId)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         }
+
+        // Revisar cookies
+        if (request.getCookies() != null) {
+            for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+                if (cookie.getName().equals("token")) {
+                    String token = cookie.getValue();
+                    Long usuarioId = jwtUtil.obtenerIdDesdeToken(token);
+                    return usuarioService.obtenerUsuarioPorId(usuarioId)
+                            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                }
+            }
+        }
+
         throw new RuntimeException("Token no válido");
     }
+
 }

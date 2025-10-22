@@ -50,6 +50,21 @@ public class OfertaController {
         return ResponseEntity.ok(productos);
     }
 
+
+
+    // =========================
+// Obtener productos para el carrusel
+// =========================
+    @GetMapping("/carrusel")
+    public ResponseEntity<List<ProductoOfertaDTO>> obtenerCarrusel(
+            @RequestParam(name = "limite", defaultValue = "5") int limite) {
+
+        List<ProductoOfertaDTO> carrusel = ofertaService.obtenerProductosCarrusel(limite);
+        return ResponseEntity.ok(carrusel);
+    }
+
+
+
     // =========================
     // Buscar oferta por ID - Público
     // =========================

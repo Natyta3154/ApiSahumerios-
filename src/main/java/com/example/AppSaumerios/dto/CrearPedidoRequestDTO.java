@@ -3,6 +3,8 @@ package com.example.AppSaumerios.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class CrearPedidoRequestDTO {
@@ -12,8 +14,7 @@ public class CrearPedidoRequestDTO {
 
     @NotEmpty(message = "Debe incluir al menos un detalle de pedido")
     @Valid
-    private List<DetallePedidoRequestDTO> detalles;
-
+    private List<DetallePedidoRequestDTO> detalles = new ArrayList<>();
     // Getters y setters
     public Long getUsuarioId() { return usuarioId; }
     public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }

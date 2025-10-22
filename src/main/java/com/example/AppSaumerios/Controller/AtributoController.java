@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/atributos")
+@RequestMapping("/api/atributos")
 @CrossOrigin(
         origins = {
                 "http://localhost:9002",
@@ -29,7 +29,7 @@ public class AtributoController {
     private AtributoService atributoService;
 
     // 📌 Listar todos los atributos
-    @GetMapping("/listado")
+    @GetMapping("/listadoAtributos")
     public List<Atributo> listarTodas() {
         return atributoService.listarTodas();
     }

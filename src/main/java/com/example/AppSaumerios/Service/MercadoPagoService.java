@@ -45,35 +45,40 @@ public class MercadoPagoService {
 
     public String crearPreferenciaPago(Pedidos pedido) {
         try {
+            // ✅ Configurar el token de Mercado Pago
             MercadoPagoConfig.setAccessToken(accessToken);
 
-            List<PreferenceItemRequest> items = new ArrayList<>();
+            // ✅ Armar los ítems desde el pedido
+            List<PreferenceItemRequest> items = pedido.getDetalles().stream()
+                    .map(detalle -> PreferenceItemRequest.builder()
+                            .id(detalle.getProducto().getId().toString())
+                            .title(detalle.getProducto().getNombre())
+                            .description(detalle.getProducto().getDescripcion())
+                            .categoryId("general")
+                            .quantity(detalle.getCantidad())
+                            .currencyId("ARS")
+                            .unitPrice(detalle.getProducto().getPrecio()) // ya es BigDecimal
+                            .build())
+                    .toList();
 
-            pedido.getDetalles().forEach(detalle -> {
-                PreferenceItemRequest item = PreferenceItemRequest.builder()
-                        .id(detalle.getProducto().getId().toString())
-                        .title(detalle.getProducto().getNombre())
-                        .description(detalle.getProducto().getDescripcion())
-                        .categoryId("general")
-                        .quantity(detalle.getCantidad())
-                        .currencyId("ARS")
-                        .unitPrice(BigDecimal.valueOf(detalle.getProducto().getPrecio().doubleValue()))
-                        .build();
-                items.add(item);
-            });
+            if (items.isEmpty()) {
+                throw new IllegalArgumentException("El pedido no contiene productos válidos para generar la preferencia.");
+            }
 
-            // Usar URLs del backend en lugar del frontend
-            String baseUrl = "https://miapptest.loca.lt"; // Cambia según tu configuración
+            // ✅ URLs del backend (ajustá el dominio o túnel local)
+            String baseUrl = "https://miapptest.loca.lt"; // ⚠️ Cambiar si usás ngrok o dominio real
             String successUrl = baseUrl + "/api/pagos/exito?pedido_id=" + pedido.getId();
             String failureUrl = baseUrl + "/api/pagos/fallo?pedido_id=" + pedido.getId();
             String pendingUrl = baseUrl + "/api/pagos/pendiente?pedido_id=" + pedido.getId();
 
+            // ✅ Configurar las URLs de retorno
             PreferenceBackUrlsRequest backUrls = PreferenceBackUrlsRequest.builder()
                     .success(successUrl)
                     .failure(failureUrl)
                     .pending(pendingUrl)
                     .build();
 
+            // ✅ Crear la preferencia
             PreferenceRequest preferenceRequest = PreferenceRequest.builder()
                     .items(items)
                     .backUrls(backUrls)
@@ -85,18 +90,18 @@ public class MercadoPagoService {
             PreferenceClient client = new PreferenceClient();
             Preference preference = client.create(preferenceRequest);
 
-            // Guardar ID de preferencia en el pedido
+            // ✅ Guardar el ID de preferencia en el pedido
             pedido.setPreferenciaId(preference.getId());
             pedidoRepository.save(pedido);
 
-            // Retornar link de pago
+            // ✅ Retornar el link de pago para redirigir al usuario
             return preference.getInitPoint();
 
         } catch (MPApiException ex) {
-            System.err.println("Error de API de MercadoPago: " + ex.getApiResponse().getContent());
+            System.err.println("⚠️ Error de API de MercadoPago: " + ex.getApiResponse().getContent());
             throw new RuntimeException("Error al crear preferencia de pago: " + ex.getMessage());
         } catch (MPException ex) {
-            System.err.println("Error general de MercadoPago: " + ex.getMessage());
+            System.err.println("⚠️ Error general de MercadoPago: " + ex.getMessage());
             throw new RuntimeException("Error al crear preferencia de pago: " + ex.getMessage());
         }
     }

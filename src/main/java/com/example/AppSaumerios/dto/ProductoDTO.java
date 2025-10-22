@@ -18,6 +18,7 @@ public class ProductoDTO {
     private Boolean activo;
     private String categoriaNombre;
     private String mensaje;
+    private boolean destacado;
     private List<String> fragancias = new ArrayList<>();
     private List<ProductoAtributoDTO> atributos = new ArrayList<>();
 
@@ -27,6 +28,16 @@ public class ProductoDTO {
     // ==============================
     // Getters & Setters
     // ==============================
+
+
+    public boolean isDestacado() {
+        return destacado;
+    }
+
+    public void setDestacado(boolean destacado) {
+        this.destacado = destacado;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

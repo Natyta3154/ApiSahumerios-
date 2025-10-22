@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "fragancias")
@@ -16,7 +18,7 @@ public class Fragancia {
 
     @ManyToMany(mappedBy = "fragancias")
     @JsonBackReference
-    private List<Productos> productos = new ArrayList<>();
+    private Set<Productos> productos = new HashSet<>();
 
     public Fragancia(String nombre) {
         this.nombre = nombre;
@@ -45,11 +47,11 @@ public class Fragancia {
         this.nombre = nombre;
     }
 
-    public List<Productos> getProductos() {
+    public Set<Productos> getProductos() {
         return productos;
     }
 
-    public void setProductos(List<Productos> productos) {
+    public void setProductos(Set<Productos> productos) {
         this.productos = productos;
     }
 }

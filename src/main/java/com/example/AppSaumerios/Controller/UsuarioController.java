@@ -40,6 +40,36 @@ public class UsuarioController {
         this.jwtUtil = jwtUtil;
     }
 
+    // ===================== REGISTRO =====================
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody Usuarios nuevoUsuario, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Datos inválidos"));
+        }
+
+        // Validar que no exista otro usuario con el mismo email
+        boolean emailExistente = usuarioService.obtenerUsuarios().stream()
+                .anyMatch(u -> u.getEmail().equalsIgnoreCase(nuevoUsuario.getEmail()));
+        if (emailExistente) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "El email ya está registrado"));
+        }
+
+        // Guardar usuario (el service ya encripta password y setea rol USER por defecto)
+        Usuarios guardado = usuarioService.guardar(nuevoUsuario);
+
+        Map<String, Object> response = Map.of(
+                "id", guardado.getId(),
+                "nombre", guardado.getNombre(),
+                "email", guardado.getEmail(),
+                "rol", guardado.getRol(),
+                "message", "Usuario registrado correctamente. Ahora puede iniciar sesión."
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+
     // ===================== LOGIN =====================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
@@ -93,10 +123,12 @@ public class UsuarioController {
     // ===================== LOGOUT =====================
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
+        boolean isProd = "prod".equals(System.getProperty("spring.profiles.active", "dev"));
+
         ResponseCookie cookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
-                .secure(true)           // obligatorio en prod
-                .sameSite("None")       // cross-site
+                .secure(isProd)             // solo HTTPS en prod
+                .sameSite(isProd ? "None" : "Lax") // Lax funciona en dev
                 .path("/")
                 .maxAge(0)
                 .build();

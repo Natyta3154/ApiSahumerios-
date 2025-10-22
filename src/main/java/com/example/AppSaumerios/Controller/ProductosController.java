@@ -2,9 +2,7 @@ package com.example.AppSaumerios.Controller;
 
 import com.example.AppSaumerios.Service.ProductoService;
 import com.example.AppSaumerios.Service.OfertaService;
-import com.example.AppSaumerios.dto.ProductoDTO;
-import com.example.AppSaumerios.dto.ProductoOfertaDTO;
-import com.example.AppSaumerios.dto.ProductoUpdateDTO;
+import com.example.AppSaumerios.dto.*;
 import com.example.AppSaumerios.entity.Atributo;
 import com.example.AppSaumerios.entity.Categoria;
 import com.example.AppSaumerios.entity.Fragancia;
@@ -13,20 +11,26 @@ import com.example.AppSaumerios.repository.AtributoRepository;
 import com.example.AppSaumerios.repository.CategoriaRepository;
 import com.example.AppSaumerios.repository.FraganciaRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
+import com.example.AppSaumerios.util.ProductoMapper;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+//import java.awt.print.Pageable;
 import java.time.LocalDateTime;
 import java.util.*;
-
+import java.util.stream.Collectors;
 
 
 @RestController
-@RequestMapping("/productos")
+@RequestMapping("/api/productos")
 @CrossOrigin(
         origins = {
                 "http://localhost:9002",
@@ -43,6 +47,9 @@ public class ProductosController {
 
     @Autowired
     private ProductoService productoservice;
+
+
+
 
     @Autowired
     private OfertaService ofertaService;
@@ -63,14 +70,51 @@ public class ProductosController {
     // ENDPOINTS PÚBLICOS
     // -------------------
 
+
+    //Endpoint para el resumen de los productos
+    @GetMapping("/resumen")
+    public Page<ProductoResumenDTO> listarProductosResumen(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return productoservice.listarResumen(pageable); // ✅ ahora sí
+    }
+
+    @GetMapping("/relacionados")
+    public List<ProductoResumenDTO> listarRelacionados(
+            @RequestParam Long categoriaId,
+            @RequestParam(required = false) Long excludeId) {
+        return productoservice.listarRelacionados(categoriaId, excludeId);
+    }
+
+
+
     @GetMapping("/listado")
     public List<ProductoDTO> listarTodos() {
         List<Productos> productos = productoservice.listarTodos();
-        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+
+        // Convertir ProductoOfertaDTO a OfertaDTO
+        List<OfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal().stream()
+                .map(of -> {
+                    OfertaDTO dto = new OfertaDTO();
+                    dto.setIdOferta(of.getId());
+                    dto.setProductoId(of.getId()); // <-- acá necesitás un método que devuelva el productoId
+                    dto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
+                    dto.setTipoDescuento("MONTO");
+                    dto.setFechaInicio(of.getFechaInicio());
+                    dto.setFechaFin(of.getFechaFin());
+                    dto.setEstado(true);
+                    dto.setNombreProducto(of.getNombre());
+                    dto.setPrecio(of.getPrecioOriginal());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
 
         return productos.stream()
-                .map(producto -> productoservice.mapToDTO(producto, todasLasOfertas))
-                .toList();
+                .map(producto -> ProductoMapper.toDTO(producto, todasLasOfertas))
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
@@ -78,10 +122,44 @@ public class ProductosController {
         Optional<Productos> productoOpt = productoservice.buscarPorId(id);
         if (productoOpt.isEmpty()) return ResponseEntity.notFound().build();
 
-        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
-        ProductoDTO dto = productoservice.mapToDTO(productoOpt.get(), todasLasOfertas);
+        // Convertir ProductoOfertaDTO a OfertaDTO
+        List<OfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal().stream()
+                .map(of -> {
+                    OfertaDTO dto = new OfertaDTO();
+                    dto.setIdOferta(of.getId());
+                    dto.setProductoId(of.getId());
+                    dto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
+                    dto.setTipoDescuento("MONTO");
+                    dto.setFechaInicio(of.getFechaInicio());
+                    dto.setFechaFin(of.getFechaFin());
+                    dto.setEstado(true);
+                    dto.setNombreProducto(of.getNombre());
+                    dto.setPrecio(of.getPrecioOriginal());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        ProductoDTO dto = ProductoMapper.toDTO(productoOpt.get(), todasLasOfertas);
         return ResponseEntity.ok(dto);
     }
+
+    @GetMapping("/destacados")
+    public ResponseEntity<?> obtenerProductosDestacados() {
+        try {
+            List<ProductoDTO> destacados = productoservice.obtenerProductosDestacadosDTO();
+            return ResponseEntity.ok(destacados);
+        } catch (Exception e) {
+            e.printStackTrace(); // log completo del error
+            return ResponseEntity.status(500)
+                    .body(Map.of(
+                            "status", 500,
+                            "error", "Internal Server Error",
+                            "mensaje", e.getMessage(),
+                            "timestamp", LocalDateTime.now()
+                    ));
+        }
+    }
+
 
     @PreAuthorize("hasAuthority('ROLE_USER')")
     @PostMapping("/vender/{id}")
@@ -90,8 +168,9 @@ public class ProductosController {
             @RequestParam int cantidad) {
 
         Productos productoActualizado = productoservice.venderProducto(id, cantidad);
-        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
-        ProductoDTO dto = productoservice.mapToDTO(productoActualizado, todasLasOfertas);
+        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
+        ProductoDTO dto = ProductoMapper.toDTO(productoActualizado, todasLasOfertas);
+
         dto.setMensaje("Venta realizada, stock actualizado");
         return ResponseEntity.ok(dto);
     }
@@ -103,7 +182,7 @@ public class ProductosController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/agregar")
     public ResponseEntity<ProductoDTO> agregarProducto(@RequestBody ProductoDTO request) {
-        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
+        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
 
         Optional<Productos> productoExistente = productoRepository.findByNombre(request.getNombre());
 
@@ -117,7 +196,7 @@ public class ProductosController {
 
             productoRepository.save(producto);
 
-            ProductoDTO dto = productoservice.mapToDTO(producto, todasLasOfertas);
+            ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
             dto.setMensaje("Producto existente actualizado: stock y total ingresado sumados");
             return ResponseEntity.ok(dto);
         }
@@ -181,7 +260,7 @@ public class ProductosController {
 
         productoRepository.save(producto);
 
-        ProductoDTO dto = productoservice.mapToDTO(producto, todasLasOfertas);
+        ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
         dto.setMensaje("Producto agregado correctamente");
         return ResponseEntity.ok(dto);
     }
@@ -193,11 +272,12 @@ public class ProductosController {
             @RequestBody ProductoUpdateDTO dto) {
 
         Productos actualizado = productoservice.actualizarProductos(id, dto);
-        List<ProductoOfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal();
-        ProductoDTO dtoResponse = productoservice.mapToDTO(actualizado, todasLasOfertas);
+        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
+        ProductoDTO dtoResponse = ProductoMapper.toDTO(actualizado, todasLasOfertas);
 
         return ResponseEntity.ok(dtoResponse);
     }
+
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/eliminar/{id}")

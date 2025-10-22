@@ -23,6 +23,22 @@ public class OfertaService {
         this.ofertaRepository = ofertaRepository;
         this.productoRepository = productoRepository;
     }
+    // =========================
+// Productos para carrusel: solo ofertas activas
+// =========================
+    public List<ProductoOfertaDTO> obtenerProductosCarrusel(int limite) {
+        // 1️⃣ Obtener todas las ofertas activas y filtrar las que tengan descuento
+        List<ProductoOfertaDTO> productosConOferta = listarOfertasConPrecioFinal().stream()
+                .filter(p -> p.getPrecioConDescuento().compareTo(p.getPrecioOriginal()) != 0) // tiene descuento
+                .sorted((p1, p2) -> p2.getPrecioOriginal().compareTo(p1.getPrecioOriginal())) // ordenar por precio descendente
+                .limit(limite) // limitar a los top N
+                .collect(Collectors.toList());
+
+        return productosConOferta;
+    }
+
+
+
 
     // =========================
     // Crear o actualizar oferta
@@ -80,6 +96,16 @@ public class OfertaService {
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
+
+    // =========================
+// Listar todas las ofertas como OfertaDTO
+// =========================
+    public List<OfertaDTO> obtenerTodasLasOfertasDTO() {
+        return ofertaRepository.findAll().stream()
+                .map(this::mapOfertaToDTO)
+                .collect(Collectors.toList());
+    }
+
 
     // =========================
     // Buscar oferta por ID
@@ -151,8 +177,10 @@ public class OfertaService {
                 oferta.getProducto().getId(),
                 oferta.getProducto().getNombre(),
                 precioOriginal,
-                precioConDescuento
+                precioConDescuento,
+                oferta.getProducto().getImagenUrl()
         );
+
 
         // <-- Asignar fechas aquí
         dto.setFechaInicio(oferta.getFechaInicio());
@@ -160,4 +188,6 @@ public class OfertaService {
 
         return dto;
     }
+
+
 }

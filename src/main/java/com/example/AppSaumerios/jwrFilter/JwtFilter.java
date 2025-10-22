@@ -61,7 +61,6 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String extraerToken(HttpServletRequest request) {
-        // Header Authorization
         String authHeader = request.getHeader(AUTH_HEADER);
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             String token = authHeader.substring(BEARER_PREFIX.length()).trim();
@@ -71,7 +70,6 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
-        // Fallback: cookie
         if (request.getCookies() != null) {
             for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
                 if ("token".equals(cookie.getName())) {
@@ -134,6 +132,7 @@ public class JwtFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(String.format("{\"error\":\"unauthorized\",\"message\":\"%s\"}", message));
+            response.flushBuffer(); // evita loops infinitos
         } catch (IOException ignored) {
             logger.error("Error al enviar respuesta de error");
         }
@@ -145,6 +144,7 @@ public class JwtFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write("{\"error\":\"internal_server_error\",\"message\":\"" + message + "\"}");
+            response.flushBuffer(); // evita loops infinitos
         } catch (IOException ignored) {
             logger.error("Error al enviar respuesta de error crítico");
         }
@@ -155,25 +155,47 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
-        // ✅ Siempre permitir preflight
-        if ("OPTIONS".equalsIgnoreCase(method)) {
-            logger.debug("Preflight OPTIONS permitido: {}", path);
-            return true;
+        // Evitar loop en endpoints de error
+        if (path.startsWith("/error")) return true;
+
+        // Siempre permitir preflight
+        if ("OPTIONS".equalsIgnoreCase(method)) return true;
+
+        // Endpoints públicos de usuarios
+        if (path.equals("/usuarios/registrar") || path.equals("/usuarios/login")) return true;
+
+        // Endpoints públicos de productos
+        if ("GET".equalsIgnoreCase(method) && (
+                path.equals("/api/productos") ||
+                        path.equals("/api/productos/resumen") ||
+                        path.equals("/api/productos/listado") ||
+                        path.equals("/api/productos/destacados") ||
+                        path.matches("/api/productos/\\d+")
+        )) return true;
+
+        // Blog
+        if (path.startsWith("/api/posts")) return true;
+        if (path.startsWith("/api/categoria-blog/listarCategoriaBlog")) return true;
+
+        // Fragancias
+        if (path.startsWith("/api/fragancias/listadoFragancias")) return true;
+
+        //categoria public
+        if (path.equals("/atributos/listado")) {
+            return true; // No filtrar JWT
         }
 
-        // ✅ Endpoints públicos
-        if (path.equals("/usuarios/registrar") || path.equals("/usuarios/login")) {
-            return true;
-        }
 
-        // ✅ Solo GET de productos públicos
-        if ("GET".equalsIgnoreCase(method) && (path.equals("/productos/listado") || path.startsWith("/productos/"))) {
-            return true;
-        }
-
-        // ✅ Ofertas y atributos públicos
-        return path.equals("/api/ofertas/listar") ||
+        // Ofertas / Atributos
+        if (path.equals("/api/ofertas/listar") ||
                 path.startsWith("/api/ofertas/con-precio") ||
-                path.equals("/atributos/listado");
+                path.equals("/api/ofertas/carrusel") ||
+                path.equals("/api/atributos/listadoAtributos") ||
+                path.equals("/api/categorias/listado")
+        ) return true;
+
+        // Todo lo demás requiere JWT
+        return false;
     }
 }
+
