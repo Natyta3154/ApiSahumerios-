@@ -57,7 +57,7 @@ public class PostController {
      * 🔹 Eliminar un post (solo ADMIN)
      */
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/eliminar/{id}")
     public void deletePost(@PathVariable Long id) {
         service.deletePost(id);
     }

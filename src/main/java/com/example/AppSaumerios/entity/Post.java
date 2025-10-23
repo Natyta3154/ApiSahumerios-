@@ -15,10 +15,10 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "posts")
+@Getter
+@Setter
 public class Post {
 
     @Id
@@ -38,8 +38,8 @@ public class Post {
     private String imagenUrl;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
-    private CategoriaBlog category;
+    @JoinColumn(name = "category_id")  // coincide con la tabla
+    private CategoriaBlog categoria;
 
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
@@ -52,3 +52,4 @@ public class Post {
         this.fechaActualizacion = LocalDateTime.now();
     }
 }
+

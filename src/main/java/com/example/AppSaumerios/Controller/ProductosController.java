@@ -271,7 +271,7 @@ public class ProductosController {
             @PathVariable Long id,
             @RequestBody ProductoUpdateDTO dto) {
 
-        Productos actualizado = productoservice.actualizarProductos(id, dto);
+        Productos actualizado = productoservice.actualizarCamposBasicos(id, dto);
         List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
         ProductoDTO dtoResponse = ProductoMapper.toDTO(actualizado, todasLasOfertas);
 

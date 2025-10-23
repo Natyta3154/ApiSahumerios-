@@ -58,8 +58,9 @@ public class ProductoService {
         return productoRepository.save(productos);
     }
 
-
-    //los rrrelacionado para la pageDetalle
+    // =========================
+    // Productos destacados y relacionados
+    // =========================
     public List<ProductoResumenDTO> listarRelacionados(Long categoriaId, Long excludeId) {
         List<Productos> productos = productoRepository
                 .findTop4ByActivoTrueAndCategoriaIdOrderByPrecioDesc(categoriaId);
@@ -75,10 +76,6 @@ public class ProductoService {
                 .toList();
     }
 
-
-    // =========================
-    // Productos destacados
-    // =========================
     @Cacheable("productosDestacados")
     @Transactional(readOnly = true)
     public List<Productos> obtenerProductosDestacados(Long categoriaId) {
@@ -100,39 +97,63 @@ public class ProductoService {
                 .collect(Collectors.toList());
     }
 
-    // =========================
-    // Resumen de productos
-    // =========================
     @Transactional(readOnly = true)
     public Page<ProductoResumenDTO> listarResumen(Pageable pageable) {
         return productoRepository.listarResumen(pageable);
     }
 
     // =========================
-    // Actualizar productos
+    // Actualizar campos básicos del producto
     // =========================
     @Transactional
-    public Productos actualizarProductos(Long id, ProductoUpdateDTO dto) {
+    public Productos actualizarCamposBasicos(Long id, ProductoUpdateDTO dto) {
         Productos producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
 
-        // Actualizar campos básicos directamente desde el DTO
-        ProductoMapper.updateEntityFromDTO(dtoToProductoDTO(dto), producto);
+        if (dto.getNombre() != null) producto.setNombre(dto.getNombre());
+        if (dto.getDescripcion() != null) producto.setDescripcion(dto.getDescripcion());
+        if (dto.getPrecio() != null) producto.setPrecio(dto.getPrecio());
+        if (dto.getPrecioMayorista() != null) producto.setPrecioMayorista(dto.getPrecioMayorista());
+        if (dto.getStock() != null) producto.setStock(dto.getStock());
+        if (dto.getTotalIngresado() != null) producto.setTotalIngresado(dto.getTotalIngresado());
+        if (dto.getActivo() != null) producto.setActivo(dto.getActivo());
+        if (dto.getImagenUrl() != null) producto.setImagenUrl(dto.getImagenUrl());
 
-        // Categoría
-        if (dto.getCategoriaNombre() != null && !dto.getCategoriaNombre().isBlank()) {
-            Categoria cat = categoriaRepository.findByNombre(dto.getCategoriaNombre())
+        validarStockYPrecio(producto);
+        return productoRepository.save(producto);
+    }
+
+    // =========================
+    // Actualizar categoría
+    // =========================
+    @Transactional
+    public Productos actualizarCategoria(Long id, String nombreCategoria) {
+        Productos producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
+
+        if (nombreCategoria != null && !nombreCategoria.isBlank()) {
+            Categoria categoria = categoriaRepository.findByNombre(nombreCategoria)
                     .orElseGet(() -> {
-                        Categoria nueva = new Categoria();  // constructor vacío
-                        nueva.setNombre(dto.getCategoriaNombre());
+                        Categoria nueva = new Categoria();
+                        nueva.setNombre(nombreCategoria);
                         return categoriaRepository.save(nueva);
                     });
-            producto.setCategoria(cat);
+            producto.setCategoria(categoria);
         }
 
-        // Fragancias
-        if (dto.getFragancias() != null && !dto.getFragancias().isEmpty()) {
-            List<Fragancia> fragancias = dto.getFragancias().stream()
+        return productoRepository.save(producto);
+    }
+
+    // =========================
+    // Actualizar fragancias
+    // =========================
+    @Transactional
+    public Productos actualizarFragancias(Long id, List<String> fraganciasNombres) {
+        Productos producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
+
+        if (fraganciasNombres != null && !fraganciasNombres.isEmpty()) {
+            List<Fragancia> fragancias = fraganciasNombres.stream()
                     .map(nombre -> fraganciaRepository.findByNombre(nombre)
                             .orElseGet(() -> {
                                 Fragancia f = new Fragancia();
@@ -143,9 +164,19 @@ public class ProductoService {
             producto.setFragancias(fragancias);
         }
 
-        // Atributos
-        if (dto.getAtributos() != null && !dto.getAtributos().isEmpty()) {
-            List<ProductoAtributo> productoAtributos = dto.getAtributos().stream()
+        return productoRepository.save(producto);
+    }
+
+    // =========================
+    // Actualizar atributos
+    // =========================
+    @Transactional
+    public Productos actualizarAtributos(Long id, List<ProductoDTO.ProductoAtributoDTO> atributosDTO) {
+        Productos producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No se encontró el producto con id " + id));
+
+        if (atributosDTO != null && !atributosDTO.isEmpty()) {
+            List<ProductoAtributo> productoAtributos = atributosDTO.stream()
                     .map(aDto -> {
                         Atributo atributo = atributoRepository.findByNombre(aDto.getNombre())
                                 .orElseGet(() -> {
@@ -159,32 +190,8 @@ public class ProductoService {
             producto.setProductoAtributos(productoAtributos);
         }
 
-        validarStockYPrecio(producto);
         return productoRepository.save(producto);
     }
-
-    // Método auxiliar para mapear ProductoUpdateDTO -> ProductoDTO
-    private ProductoDTO dtoToProductoDTO(ProductoUpdateDTO dto) {
-        ProductoDTO tempDTO = new ProductoDTO();
-        tempDTO.setNombre(dto.getNombre());
-        tempDTO.setDescripcion(dto.getDescripcion());
-        tempDTO.setPrecio(dto.getPrecio());
-        tempDTO.setPrecioMayorista(dto.getPrecioMayorista());
-        tempDTO.setStock(dto.getStock());
-        tempDTO.setTotalIngresado(dto.getTotalIngresado());
-        tempDTO.setImagenUrl(dto.getImagenUrl());
-        tempDTO.setActivo(dto.getActivo());
-        tempDTO.setCategoriaNombre(dto.getCategoriaNombre());
-        tempDTO.setFragancias(dto.getFragancias());
-        tempDTO.setAtributos(
-                dto.getAtributos().stream()
-                        .map(a -> new ProductoDTO.ProductoAtributoDTO(a.getNombre(), a.getValor()))
-                        .collect(Collectors.toList())
-        );
-        return tempDTO;
-    }
-
-
 
     // =========================
     // Eliminar producto

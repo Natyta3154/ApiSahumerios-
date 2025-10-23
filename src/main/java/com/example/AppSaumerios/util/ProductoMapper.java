@@ -130,6 +130,7 @@ public class ProductoMapper {
     }
 
     // metodo para hacer la conversion de ProductoUpdateDTO a ProductoDTO
+    // método para hacer la conversión de ProductoUpdateDTO a ProductoDTO
     public static ProductoDTO dtoFromUpdate(ProductoUpdateDTO updateDTO) {
         ProductoDTO dto = new ProductoDTO();
 
@@ -138,20 +139,12 @@ public class ProductoMapper {
         dto.setPrecio(updateDTO.getPrecio());
         dto.setPrecioMayorista(updateDTO.getPrecioMayorista());
         dto.setStock(updateDTO.getStock());
-        dto.setTotalIngresado(updateDTO.getTotalIngresado());
         dto.setImagenUrl(updateDTO.getImagenUrl());
         dto.setActivo(updateDTO.getActivo());
-        dto.setCategoriaNombre(updateDTO.getCategoriaNombre());
-        dto.setFragancias(updateDTO.getFragancias());
-
-        if (updateDTO.getAtributos() != null) {
-            List<ProductoDTO.ProductoAtributoDTO> atributosDTO = updateDTO.getAtributos().stream()
-                    .map(a -> new ProductoDTO.ProductoAtributoDTO(a.getNombre(), a.getValor()))
-                    .collect(Collectors.toList());
-            dto.setAtributos(atributosDTO);
-        }
+        dto.setDestacado(updateDTO.getDestacado());
 
         return dto;
+
     }
 
 }

@@ -1,6 +1,8 @@
 package com.example.AppSaumerios.util;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,58 +17,62 @@ public class JwtUtil {
     @Value("${JWT_SECRET_KEY}")
     private String SECRET_KEY;
 
-    private static final long EXPIRATION_TIME_MS = 1000 * 60 * 60 * 2; // 2 horas
+    // Duraciones en milisegundos
+    private static final long EXPIRATION_USER_MS = 1000 * 60 * 60;          // 1 hora
+    private static final long EXPIRATION_ADMIN_MS = 1000 * 60 * 30;         // 30 minutos
+    private static final long REFRESH_TOKEN_EXP_MS = 1000 * 60 * 60 * 24 * 7; // 7 días
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Genera token JWT con id de usuario y rol
-     */
+    // ================== ACCESS TOKEN ==================
     public String generarToken(Long id, String rol) {
-        // Normalizar rol al formato correcto
         if (rol == null) rol = "ROLE_USER";
         if (!rol.startsWith("ROLE_")) rol = "ROLE_" + rol.toUpperCase();
         else rol = rol.toUpperCase();
+
+        long expirationTime = rol.equals("ROLE_ADMIN") ? EXPIRATION_ADMIN_MS : EXPIRATION_USER_MS;
 
         return Jwts.builder()
                 .setSubject(id.toString())
                 .claim("rol", rol)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MS))
-                .signWith(getSigningKey())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    /**
-     * Extrae id del token
-     */
+    // ================== REFRESH TOKEN ==================
+    public String generarRefreshToken(Long id) {
+        return Jwts.builder()
+                .setSubject(id.toString())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXP_MS))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // ================== EXTRACCIÓN ==================
     public Long obtenerIdDesdeToken(String token) {
-        String id = Jwts.parserBuilder()
+        Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
-        return Long.parseLong(id);
+                .getBody();
+        return Long.parseLong(claims.getSubject());
     }
 
-    /**
-     * Extrae rol del token
-     */
     public String obtenerRolDesdeToken(String token) {
-        return Jwts.parserBuilder()
+        Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .get("rol", String.class);
+                .getBody();
+        return claims.get("rol", String.class);
     }
 
-    /**
-     *Valida si el token sigue siendo válido (no expirado)
-     */
+    // ================== VALIDACIÓN ==================
     public boolean validarToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -78,4 +84,21 @@ public class JwtUtil {
             return false;
         }
     }
+
+    public boolean estaExpirado(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.getExpiration().before(new Date());
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
+    }
 }
+
+

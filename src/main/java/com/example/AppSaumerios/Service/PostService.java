@@ -39,21 +39,20 @@ public class PostService {
 
     /** 🔹 Crear un post (ADMIN) */
     public PostDTO savePost(Post post) {
-        Long catId = post.getCategory() != null ? post.getCategory().getId() : null;
+        Long catId = post.getCategoria() != null ? post.getCategoria().getId() : null;
         if (catId == null) {
             throw new RuntimeException("Debe asignarse una categoría al post");
         }
 
         CategoriaBlog categoria = categoriaRepository.findById(catId)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + catId));
-        post.setCategory(categoria);
+        post.setCategoria(categoria);
         post.setFechaActualizacion(LocalDateTime.now());
 
         Post saved = repository.save(post);
         return convertToDTO(saved);
     }
 
-    /** 🔹 Actualizar un post (ADMIN) */
     public PostDTO updatePost(Long id, Post postActualizado) {
         Post existente = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado con ID: " + id));
@@ -63,12 +62,11 @@ public class PostService {
         existente.setContenido(postActualizado.getContenido());
         existente.setImagenUrl(postActualizado.getImagenUrl());
 
-        // manejar categoría
-        Long catId = postActualizado.getCategory() != null ? postActualizado.getCategory().getId() : null;
+        Long catId = postActualizado.getCategoria() != null ? postActualizado.getCategoria().getId() : null;
         if (catId != null) {
             CategoriaBlog categoria = categoriaRepository.findById(catId)
                     .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + catId));
-            existente.setCategory(categoria);
+            existente.setCategoria(categoria);
         }
 
         existente.setFechaActualizacion(LocalDateTime.now());
@@ -76,18 +74,17 @@ public class PostService {
 
         return convertToDTO(updated);
     }
-
     /** 🔹 Eliminar un post (ADMIN) */
     public void deletePost(Long id) {
         repository.deleteById(id);
     }
 
-    /** 🔹 Convertir entidad Post a DTO */
+
     private PostDTO convertToDTO(Post post) {
         CategoriaBlogDTO catDTO = new CategoriaBlogDTO();
-        catDTO.setId(post.getCategory().getId());
-        catDTO.setNombre(post.getCategory().getNombre());
-        catDTO.setDescripcion(post.getCategory().getDescripcion());
+        catDTO.setId(post.getCategoria().getId());
+        catDTO.setNombre(post.getCategoria().getNombre());
+        catDTO.setDescripcion(post.getCategoria().getDescripcion());
 
         PostDTO dto = new PostDTO();
         dto.setId(post.getId());
@@ -95,9 +92,10 @@ public class PostService {
         dto.setDescripcion(post.getDescripcion());
         dto.setContenido(post.getContenido());
         dto.setImagenUrl(post.getImagenUrl());
-        dto.setCategory(catDTO);
+        dto.setCategoria(catDTO);
         dto.setFechaCreacion(post.getFechaCreacion());
         dto.setFechaActualizacion(post.getFechaActualizacion());
         return dto;
     }
+
 }

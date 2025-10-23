@@ -4,12 +4,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "categories_blog")
+@Getter
+@Setter
 public class CategoriaBlog {
 
     @Id
@@ -22,6 +23,7 @@ public class CategoriaBlog {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
-    private List<Post> posts;
+    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Post> posts = new ArrayList<>();
 }
+

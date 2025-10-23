@@ -13,7 +13,7 @@ public class PostDTO {
     private String descripcion;
     private String contenido;
     private String imagenUrl;
-    private CategoriaBlogDTO category;
+    private CategoriaBlogDTO categoria;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
 }
