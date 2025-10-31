@@ -26,8 +26,7 @@ import java.util.*;
                 "http://localhost:8080/",
                 "http://localhost:9002",
                 "https://front-sahumerios-2.vercel.app",
-                "https://app-sahumerio3.vercel.app",
-                "https://app-aroman-w6l8.vercel.app/"
+                "https://app-aroman.vercel.app"
         },
         allowCredentials = "true"
 )

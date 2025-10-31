@@ -12,8 +12,7 @@ import java.util.List;
 @CrossOrigin(
         origins = {
                 "http://localhost:9002",
-                "https://front-sahumerios-2.vercel.app",
-                "https://app-aroman-w6l8.vercel.app" // tu dominio de producción
+                "https://app-aroman.vercel.app" // tu dominio de producción
         },
         allowCredentials = "true"
 )

@@ -22,7 +22,7 @@ public class CorsConfig {
             // URLs reales de producción
             configuration.setAllowedOriginPatterns(List.of(
                     "https://front-sahumerios-2.vercel.app",
-                    "https://app-aroman-w6l8.vercel.app"
+                    "https://app-aroman.vercel.app"
             ));
         } else {
             // URLs de desarrollo
