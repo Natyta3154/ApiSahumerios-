@@ -209,20 +209,20 @@ public class JwtFilter extends OncePerRequestFilter {
         if ("OPTIONS".equalsIgnoreCase(method)) return true;
 
         // Rutas públicas de usuarios (corregidas)
-        if (path.equals("/usuarios/register") ||
-                path.equals("/usuarios/login") ||
-                path.equals("/usuarios/logout") ||
-                path.equals("/usuarios/perfil") ||
-                path.equals("/usuarios/refresh")) {
+        if (path.startsWith("/usuarios/register") ||
+                path.startsWith("/usuarios/login") ||
+                path.startsWith("/usuarios/logout") ||
+                path.startsWith("/usuarios/perfil") ||
+                path.startsWith("/usuarios/refresh")) {
             return true;
         }
 
         // Endpoints públicos de productos
         if ("GET".equalsIgnoreCase(method) && (
-                path.equals("/api/productos") ||
-                        path.equals("/api/productos/resumen") ||
-                        path.equals("/api/productos/listado") ||
-                        path.equals("/api/productos/top5") ||
+                path.startsWith("/api/productos") ||
+                        path.startsWith("/api/productos/resumen") ||
+                        path.startsWith("/api/productos/listado") ||
+                        path.startsWith("/api/productos/top5") ||
                         path.matches("/api/productos/\\d+")
         )) return true;
 
@@ -234,14 +234,14 @@ public class JwtFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/fragancias/listadoFragancias")) return true;
 
         // Categoría pública
-        if (path.equals("/atributos/listado")) return true;
+        if (path.startsWith("/atributos/listado")) return true;
 
         // Ofertas / Atributos
-        if (path.equals("/api/ofertas/listar") ||
+        if (path.startsWith("/api/ofertas/listar") ||
                 path.startsWith("/api/ofertas/con-precio") ||
-                path.equals("/api/ofertas/carrusel") ||
-                path.equals("/api/atributos/listadoAtributos") ||
-                path.equals("/api/categorias/listado")) return true;
+                path.startsWith("/api/ofertas/carrusel") ||
+                path.startsWith("/api/atributos/listadoAtributos") ||
+                path.startsWith("/api/categorias/listado")) return true;
 
         // Todo lo demás requiere JWT
         return false;
