@@ -23,9 +23,8 @@ import java.util.*;
 @RequestMapping("/usuarios")
 @CrossOrigin(
         origins = {
-                "http://localhost:8080/",
+                "http://localhost:8080",
                 "http://localhost:9002",
-                "https://front-sahumerios-2.vercel.app",
                 "https://app-aroman.vercel.app"
         },
         allowCredentials = "true"

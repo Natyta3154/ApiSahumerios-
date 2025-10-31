@@ -21,7 +21,7 @@ public class CorsConfig {
         if ("prod".equals(profile)) {
             // URLs reales de producción
             configuration.setAllowedOriginPatterns(List.of(
-                    "https://front-sahumerios-2.vercel.app",
+
                     "https://app-aroman.vercel.app"
             ));
         } else {
