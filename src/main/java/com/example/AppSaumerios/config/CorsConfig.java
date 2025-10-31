@@ -9,7 +9,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
-
 @Configuration
 public class CorsConfig {
 
@@ -20,7 +19,7 @@ public class CorsConfig {
         String profile = System.getProperty("spring.profiles.active", "dev");
 
         if ("prod".equals(profile)) {
-            //  reales de producción
+            // URLs reales de producción
             configuration.setAllowedOriginPatterns(List.of(
                     "https://front-sahumerios-2.vercel.app",
                     "https://app-aroman-w6l8.vercel.app"
@@ -33,12 +32,10 @@ public class CorsConfig {
             ));
         }
 
-// Métodos permitidos
-        configuration.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ));
+        // Métodos HTTP permitidos
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-// Headers permitidos
+        // Headers permitidos en la petición
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -49,11 +46,13 @@ public class CorsConfig {
                 "Access-Control-Request-Headers"
         ));
 
-// Permite enviar cookies
+        // Permite enviar cookies
         configuration.setAllowCredentials(true);
 
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true); // clave para cookies HttpOnly
+        // Headers que el frontend puede leer
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
+
+        // Duración del preflight
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
