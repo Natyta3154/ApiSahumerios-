@@ -143,22 +143,29 @@ public class ProductosController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/destacados")
-    public ResponseEntity<?> obtenerProductosDestacados() {
-        try {
-            List<ProductoDTO> destacados = productoservice.obtenerProductosDestacadosDTO();
-            return ResponseEntity.ok(destacados);
-        } catch (Exception e) {
-            e.printStackTrace(); // log completo del error
-            return ResponseEntity.status(500)
-                    .body(Map.of(
-                            "status", 500,
-                            "error", "Internal Server Error",
-                            "mensaje", e.getMessage(),
-                            "timestamp", LocalDateTime.now()
-                    ));
-        }
+
+
+
+    // -------------------
+// ENDPOINTS DESTACADOS / TOP 4
+// -------------------
+
+    // Top 5 por categoría
+    @GetMapping("/top5/{categoriaId}")
+    public ResponseEntity<List<ProductoDestacadoDTO>> top5PorCategoria(@PathVariable Long categoriaId) {
+        List<ProductoDestacadoDTO> productos = productoservice.obtenerTop5PorCategoria(categoriaId);
+        if (productos.isEmpty()) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(productos);
     }
+
+    // Top 5 generales
+    @GetMapping("/top5")
+    public ResponseEntity<List<ProductoDestacadoDTO>> top5Generales(Long categoriaId) {
+        List<ProductoDestacadoDTO> productos = productoservice.obtenerTop5Generales();
+        if (productos.isEmpty()) return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(productos);
+    }
+
 
 
     @PreAuthorize("hasAuthority('ROLE_USER')")

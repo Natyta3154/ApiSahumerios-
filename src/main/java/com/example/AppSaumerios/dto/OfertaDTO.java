@@ -6,11 +6,13 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data // genera los getter y setter
 @NoArgsConstructor //genera el contructor vacio
 @AllArgsConstructor // Este es el constructor que necesita JPQL
 public class OfertaDTO {
+
 
     // Solo para creación/actualización
     private Long productoId;

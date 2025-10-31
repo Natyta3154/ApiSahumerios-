@@ -28,7 +28,8 @@ public class CorsConfig {
         } else {
             // URLs de desarrollo
             configuration.setAllowedOrigins(List.of(
-                    "http://localhost:9002"
+                    "http://localhost:9002",
+                    "http://localhost:8080"
             ));
         }
 

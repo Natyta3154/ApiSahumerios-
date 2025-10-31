@@ -18,15 +18,17 @@ public interface OfertaRepository extends JpaRepository<Ofertas, Long> {
         o.fechaFin,
         o.estado,
         o.idOferta,
-        o.nombreProducto,
-        o.descripcion,
-        o.precio
+        o.producto.nombre,
+        o.producto.descripcion,
+        o.producto.precio
     )
     FROM Ofertas o
     WHERE o.estado = true
     ORDER BY o.fechaInicio DESC
 """)
     List<OfertaDTO> findActiveOffersForCarousel();
+
+
 }
 
 

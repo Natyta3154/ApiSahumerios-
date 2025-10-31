@@ -3,6 +3,7 @@ package com.example.AppSaumerios.Controller;
 import com.example.AppSaumerios.Service.UsuarioService;
 import com.example.AppSaumerios.entity.Usuarios;
 import com.example.AppSaumerios.util.JwtUtil;
+import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -15,16 +16,17 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-        import java.time.Duration;
+import java.time.Duration;
 import java.util.*;
 
 @RestController
 @RequestMapping("/usuarios")
 @CrossOrigin(
         origins = {
+                "http://localhost:8080/",
                 "http://localhost:9002",
                 "https://front-sahumerios-2.vercel.app",
-                "https://app-sahumerio3.vercel.app" // tu dominio de producción
+                "https://app-sahumerio3.vercel.app"
         },
         allowCredentials = "true"
 )
@@ -47,7 +49,6 @@ public class UsuarioController {
             return ResponseEntity.badRequest().body(Map.of("error", "Datos inválidos"));
         }
 
-        // Validar que no exista otro usuario con el mismo email
         boolean emailExistente = usuarioService.obtenerUsuarios().stream()
                 .anyMatch(u -> u.getEmail().equalsIgnoreCase(nuevoUsuario.getEmail()));
         if (emailExistente) {
@@ -55,7 +56,6 @@ public class UsuarioController {
                     .body(Map.of("error", "El email ya está registrado"));
         }
 
-        // Guardar usuario (el service ya encripta password y setea rol USER por defecto)
         Usuarios guardado = usuarioService.guardar(nuevoUsuario);
 
         Map<String, Object> response = Map.of(
@@ -69,7 +69,7 @@ public class UsuarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-
+    // ===================== LOGIN =====================
     // ===================== LOGIN =====================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
@@ -84,29 +84,33 @@ public class UsuarioController {
         }
 
         Usuarios usuario = usuarioOpt.get();
-        String token = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
 
-        // 🔹 Cookie para producción cross-site
-        ResponseCookie cookie = ResponseCookie.from("token", token)
+        // Generar access token y refresh token
+        String accessToken = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
+        String refreshToken = jwtUtil.generarRefreshToken(usuario.getId());
+
+        // Cookies configuradas según entorno
+        ResponseCookie cookieAccess = ResponseCookie.from("token", accessToken)
                 .httpOnly(true)
-                .secure(true)              // obligatorio en producción HTTPS
-                .sameSite("None")          // necesario para cross-site
+                .secure(!isDev()) // HTTPS solo en producción
+                .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
-                .maxAge(Duration.ofHours(2))
+                .maxAge(usuario.getRol().equalsIgnoreCase("ADMIN") ? Duration.ofMinutes(30) : Duration.ofHours(1))
                 .build();
 
-        logger.info("SET-COOKIE HEADER: {}", cookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        ResponseCookie cookieRefresh = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(!isDev())
+                .sameSite(isDev() ? "Lax" : "None")
+                .path("/")
+                .maxAge(Duration.ofDays(7))
+                .build();
 
-        // 🔹 Redirección según rol
-       /* String redirectUrl;
-        if ("ADMIN".equalsIgnoreCase(usuario.getRol())) {
-            redirectUrl = "/admin";
-        } else {
-            redirectUrl = "/productos";
-        }*/
+        // Añadir cookies al response
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieAccess.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh.toString());
 
-
+        // Respuesta al frontend
         Map<String, Object> responseBody = Map.of(
                 "usuario", Map.of(
                         "id", usuario.getId(),
@@ -114,36 +118,86 @@ public class UsuarioController {
                         "email", usuario.getEmail(),
                         "rol", usuario.getRol()
                 )
-                //"redirect", redirectUrl
         );
 
         return ResponseEntity.ok(responseBody);
     }
+
+    // ===================== REFRESH TOKEN =====================
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@CookieValue(value = "refreshToken", required = false) String refreshToken,
+                                          HttpServletResponse response) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No hay refresh token"));
+        }
+
+        if (!jwtUtil.validarToken(refreshToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Refresh token inválido"));
+        }
+
+        if (jwtUtil.estaExpirado(refreshToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Refresh token expirado"));
+        }
+
+        Long userId = jwtUtil.obtenerIdDesdeToken(refreshToken);
+        Usuarios usuario = usuarioService.buscarPorId(userId);
+
+        // Generar nuevo access token
+        String nuevoAccessToken = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
+
+        ResponseCookie cookie = ResponseCookie.from("token", nuevoAccessToken)
+                .httpOnly(true)
+                .secure(!isDev())
+                .sameSite(isDev() ? "Lax" : "None")
+                .path("/")
+                .maxAge(2 * 60 * 60) // 2 horas en segundos
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return ResponseEntity.ok(Map.of("message", "Access token renovado"));
+    }
+
 
     // ===================== LOGOUT =====================
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         boolean isProd = "prod".equals(System.getProperty("spring.profiles.active", "dev"));
 
-        ResponseCookie cookie = ResponseCookie.from("token", "")
+        // Borrar cookies Access y Refresh
+        ResponseCookie cookieAccess = ResponseCookie.from("token", "")
                 .httpOnly(true)
-                .secure(isProd)             // solo HTTPS en prod
-                .sameSite(isProd ? "None" : "Lax") // Lax funciona en dev
+                .secure(isProd)
+                .sameSite(isProd ? "None" : "Lax")
                 .path("/")
                 .maxAge(0)
                 .build();
 
-        logger.info("LOGOUT - DELETE COOKIE: {}", cookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        ResponseCookie cookieRefresh = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(isProd)
+                .sameSite(isProd ? "None" : "Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        logger.info("LOGOUT - DELETE COOKIES: {}, {}", cookieAccess, cookieRefresh);
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieAccess.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh.toString());
 
         return ResponseEntity.ok(Map.of("message", "Logout exitoso"));
     }
 
     // ===================== PERFIL =====================
+
     @GetMapping("/perfil")
+    @PermitAll
     public ResponseEntity<?> perfil(@CookieValue(value = "token", required = false) String token) {
-        if (token == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No hay sesión activa");
+        if (token == null || jwtUtil.estaExpirado(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No hay sesión activa o token expirado");
         }
 
         try {

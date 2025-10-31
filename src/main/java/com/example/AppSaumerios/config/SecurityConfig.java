@@ -39,13 +39,14 @@ public class SecurityConfig {
                         // Preflight CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Rutas públicas
-                        .requestMatchers("/", "/favicon.ico", "/usuarios/registrar", "/usuarios/login", "/usuarios/perfil").permitAll()
+                        .requestMatchers("/", "/favicon.ico", "/usuarios/registrar", "/usuarios/login", "/usuarios/perfil", "usuarios/logout","/usuarios/refresh").permitAll()
                         .requestMatchers(  "/api/productos/**","/api/productos/destacados", "/api/productos/listado", "/productos/*","/productos/resumen","/api/ofertas/listar", "/api/ofertas/con-precio","/api/ofertas/carrusel").permitAll()
                         .requestMatchers("/api/productos/**").permitAll()
                         .requestMatchers("/api/posts/**").permitAll()
                         .requestMatchers("/api/fragancias/**").permitAll()
                         .requestMatchers("/api/categorias/**").permitAll()
                         .requestMatchers("/api/atributos/**").permitAll()
+                        .requestMatchers("/api/productos/top5").permitAll()
 
 
 

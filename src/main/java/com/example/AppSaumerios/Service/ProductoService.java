@@ -1,12 +1,10 @@
 package com.example.AppSaumerios.Service;
 
-import com.example.AppSaumerios.dto.ProductoAtributoDTO;
-import com.example.AppSaumerios.dto.ProductoDTO;
-import com.example.AppSaumerios.dto.ProductoResumenDTO;
-import com.example.AppSaumerios.dto.ProductoUpdateDTO;
+import com.example.AppSaumerios.dto.*;
 import com.example.AppSaumerios.entity.*;
 import com.example.AppSaumerios.repository.*;
 import com.example.AppSaumerios.util.ProductoMapper;
+import com.mysql.cj.log.Log;
 import org.springframework.cache.annotation.Cacheable;
 //import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,7 +61,7 @@ public class ProductoService {
     // =========================
     public List<ProductoResumenDTO> listarRelacionados(Long categoriaId, Long excludeId) {
         List<Productos> productos = productoRepository
-                .findTop4ByActivoTrueAndCategoriaIdOrderByPrecioDesc(categoriaId);
+                .findTop4ByActivoTrueAndCategoria_IdOrderByPrecioDesc(categoriaId);
         if (excludeId != null) {
             productos = productos.stream()
                     .filter(p -> !p.getId().equals(excludeId))
@@ -80,7 +78,7 @@ public class ProductoService {
     @Transactional(readOnly = true)
     public List<Productos> obtenerProductosDestacados(Long categoriaId) {
         if (categoriaId != null) {
-            return productoRepository.findTop4ByActivoTrueAndCategoriaIdOrderByPrecioDesc(categoriaId);
+            return productoRepository.findTop4ByActivoTrueAndCategoria_IdOrderByPrecioDesc(categoriaId);
         } else {
             return productoRepository.findTop4ByActivoTrueOrderByPrecioDesc();
         }
@@ -243,4 +241,38 @@ public class ProductoService {
             throw new IllegalArgumentException("El stock y el precio no pueden ser negativos");
         }
     }
-}
+
+
+
+
+
+
+    public List<ProductoDestacadoDTO> obtenerTop5Generales() {
+        return productoRepository.findTop4ByActivoTrueOrderByPrecioDesc()
+                .stream()
+                .map(p -> new ProductoDestacadoDTO(
+                        p.getId(),
+                        p.getNombre(),
+                        p.getDescripcion(),
+                        p.getPrecio(),
+                        p.getImagenUrl()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public List<ProductoDestacadoDTO> obtenerTop5PorCategoria(Long categoriaId) {
+        return productoRepository.findTop4ByActivoTrueAndCategoria_IdOrderByPrecioDesc(categoriaId)
+                .stream()
+                .map(p -> new ProductoDestacadoDTO(
+                        p.getId(),
+                        p.getNombre(),
+                        p.getDescripcion(),
+                        p.getPrecio(),
+                        p.getImagenUrl()
+                ))
+                .collect(Collectors.toList());
+    }
+    }
+
+
+

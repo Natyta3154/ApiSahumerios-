@@ -22,31 +22,33 @@ public interface ProductoRepository extends JpaRepository<Productos, Long> {
 
         List<Productos> findAllByNombre(String nombre);
 
+        // Actualizar precios de todos los productos de una categoría
         @Modifying
         @Query("UPDATE Productos p SET p.precio = :precio, p.precioMayorista = :precioMayorista WHERE p.idCategoria = :categoriaId")
         void actualizarPreciosPorCategoria(@Param("categoriaId") Long categoriaId,
                                            @Param("precio") BigDecimal precio,
                                            @Param("precioMayorista") BigDecimal precioMayorista);
 
-        // Top 4 productos activos por categoría ordenados por precio descendente
-        List<Productos> findTop4ByActivoTrueAndCategoriaIdOrderByPrecioDesc(Long categoriaId);
+        // Top 4 productos activos por categoría
+        List<Productos> findTop4ByActivoTrueAndCategoria_IdOrderByPrecioDesc(Long categoriaId);
 
+        // Top 4 productos activos generales
         List<Productos> findTop4ByActivoTrueOrderByPrecioDesc();
 
+        // Destacados con relaciones (cuidado: carga más pesada)
         @Query("SELECT DISTINCT p FROM Productos p " +
                 "LEFT JOIN FETCH p.productoAtributos " +
                 "WHERE p.activo = true " +
                 "ORDER BY p.precio DESC")
         List<Productos> findDestacadosConRelaciones();
 
-        // ==========================
-        // Resumen de productos
-        // ==========================
+        // Resumen de productos para paginación
         @Query("SELECT new com.example.AppSaumerios.dto.ProductoResumenDTO(" +
                 "p.id, p.nombre, p.precio, p.imagenUrl, p.categoria.nombre, p.destacado, p.descripcion) " +
                 "FROM Productos p " +
                 "WHERE p.activo = true")
         Page<ProductoResumenDTO> listarResumen(Pageable pageable);
+
 
 
         // ==========================

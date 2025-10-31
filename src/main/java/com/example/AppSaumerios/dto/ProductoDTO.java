@@ -1,5 +1,7 @@
 package com.example.AppSaumerios.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -123,5 +125,28 @@ public class ProductoDTO {
         public BigDecimal getPrecio() { return precio; }
         public void setPrecio(BigDecimal precio) { this.precio = precio; }
     }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public BigDecimal getPrecioConDescuento() {
+        if (ofertas == null || ofertas.isEmpty()) return precio;
+
+        // Busca la oferta activa
+        OfertaSimpleDTO ofertaActiva = ofertas.stream()
+                .filter(OfertaSimpleDTO::getEstado)
+                .findFirst()
+                .orElse(null);
+
+        if (ofertaActiva == null) return precio;
+
+        if ("MONTO".equalsIgnoreCase(ofertaActiva.getTipoDescuento())) {
+            return precio.subtract(ofertaActiva.getValorDescuento());
+        } else if ("PORCENTAJE".equalsIgnoreCase(ofertaActiva.getTipoDescuento())) {
+            BigDecimal descuento = precio.multiply(ofertaActiva.getValorDescuento().divide(BigDecimal.valueOf(100)));
+            return precio.subtract(descuento);
+        }
+
+        return precio;
+    }
+
 }
 

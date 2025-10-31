@@ -17,6 +17,50 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+/**
+
+ Una implementación de filtro que procesa las solicitudes HTTP entrantes para validar los JSON Web Tokens (JWT)
+
+ utilizados en la autenticación de usuarios, y asigna el contexto de seguridad adecuado para las solicitudes autorizadas.
+
+ Extiende {@link OncePerRequestFilter} para garantizar su ejecución una sola vez por solicitud.
+
+ Responsabilidades:
+
+ Extrae el JWT desde el encabezado Authorization o desde las cookies.
+
+ Verifica la validez, expiración y contenido (payload) del token para la autenticación.
+
+ Configura el contexto de autenticación del usuario en el marco de Spring Security si el token es válido.
+
+ Envía las respuestas de error correspondientes en caso de tokens inválidos, expirados o ausentes.
+
+ Omite el filtrado para ciertos recursos públicos o métodos HTTP específicos, como OPTIONS.
+
+ Componentes principales:
+
+ Procesa el encabezado Authorization y las cookies para extraer el JWT.
+
+ Utiliza la clase utilitaria {@link JwtUtil} para decodificar y validar el token.
+
+ Maneja excepciones relacionadas con el procesamiento del token, como expiración o invalidez.
+
+ Exclusión de endpoints públicos:
+
+ Este filtro omite el procesamiento de endpoints públicos predefinidos, garantizando el acceso sin restricciones
+
+ a rutas como el registro de usuarios, inicio de sesión o recursos disponibles públicamente.
+
+ El filtro se encarga de procesar las solicitudes a recursos protegidos, evitando bucles infinitos o procesamiento de errores redundantes.
+
+ Notas de uso:
+
+ Esta clase está diseñada para integrarse en el marco de Spring Security y depende de una configuración adecuada
+
+ de la clase {@link JwtUtil} para validar y analizar el contenido del JWT.
+
+ Asegúrate de que las rutas URI de acceso público estén correctamente actualizadas en el método shouldNotFilter.
+ */
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -69,7 +113,9 @@ public class JwtFilter extends OncePerRequestFilter {
                 return token;
             }
         }
-
+        //Verifica si hay cookies en la petición HTTP
+        //Busca específicamente una cookie llamada "token"
+        //Este código forma parte de un sistema de autenticación JWT que busca el token tanto en el encabezado Authorization como en las cookies de la petición
         if (request.getCookies() != null) {
             for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
                 if ("token".equals(cookie.getName())) {
@@ -85,6 +131,7 @@ public class JwtFilter extends OncePerRequestFilter {
         logger.debug("No se encontró token ni en header ni en cookie");
         return null;
     }
+
 
     private boolean validarYConfigurarAutenticacion(String token, HttpServletResponse response, String requestId) {
         try {
@@ -132,7 +179,7 @@ public class JwtFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(String.format("{\"error\":\"unauthorized\",\"message\":\"%s\"}", message));
-            response.flushBuffer(); // evita loops infinitos
+            response.flushBuffer();
         } catch (IOException ignored) {
             logger.error("Error al enviar respuesta de error");
         }
@@ -144,7 +191,7 @@ public class JwtFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write("{\"error\":\"internal_server_error\",\"message\":\"" + message + "\"}");
-            response.flushBuffer(); // evita loops infinitos
+            response.flushBuffer();
         } catch (IOException ignored) {
             logger.error("Error al enviar respuesta de error crítico");
         }
@@ -161,15 +208,21 @@ public class JwtFilter extends OncePerRequestFilter {
         // Siempre permitir preflight
         if ("OPTIONS".equalsIgnoreCase(method)) return true;
 
-        // Endpoints públicos de usuarios
-        if (path.equals("/usuarios/registrar") || path.equals("/usuarios/login")) return true;
+        // Rutas públicas de usuarios (corregidas)
+        if (path.equals("/usuarios/register") ||
+                path.equals("/usuarios/login") ||
+                path.equals("/usuarios/logout") ||
+                path.equals("/usuarios/perfil") ||
+                path.equals("/usuarios/refresh")) {
+            return true;
+        }
 
         // Endpoints públicos de productos
         if ("GET".equalsIgnoreCase(method) && (
                 path.equals("/api/productos") ||
                         path.equals("/api/productos/resumen") ||
                         path.equals("/api/productos/listado") ||
-                        path.equals("/api/productos/destacados") ||
+                        path.equals("/api/productos/top5") ||
                         path.matches("/api/productos/\\d+")
         )) return true;
 
@@ -180,22 +233,17 @@ public class JwtFilter extends OncePerRequestFilter {
         // Fragancias
         if (path.startsWith("/api/fragancias/listadoFragancias")) return true;
 
-        //categoria public
-        if (path.equals("/atributos/listado")) {
-            return true; // No filtrar JWT
-        }
-
+        // Categoría pública
+        if (path.equals("/atributos/listado")) return true;
 
         // Ofertas / Atributos
         if (path.equals("/api/ofertas/listar") ||
                 path.startsWith("/api/ofertas/con-precio") ||
                 path.equals("/api/ofertas/carrusel") ||
                 path.equals("/api/atributos/listadoAtributos") ||
-                path.equals("/api/categorias/listado")
-        ) return true;
+                path.equals("/api/categorias/listado")) return true;
 
         // Todo lo demás requiere JWT
         return false;
     }
 }
-
