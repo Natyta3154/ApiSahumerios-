@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/fragancias")
-@CrossOrigin(origins = {"http://localhost:9002", "https://front-sahumerios-2.vercel.app"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:9002", "https://app-aroman-w6l8.vercel.app" }, allowCredentials = "true")
 public class FraganciaController {
 
     @Autowired

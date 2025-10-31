@@ -23,7 +23,7 @@ public class CorsConfig {
             //  reales de producción
             configuration.setAllowedOriginPatterns(List.of(
                     "https://front-sahumerios-2.vercel.app",
-                    "https://6000-firebase-studio-1758861612535.cluster-l2bgochoazbomqgfmlhuvdvgiy.cloudworkstations.dev"
+                    "https://app-aroman-w6l8.vercel.app"
             ));
         } else {
             // URLs de desarrollo
