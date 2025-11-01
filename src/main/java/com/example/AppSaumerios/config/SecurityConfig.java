@@ -18,60 +18,73 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+    private static final String[] PUBLIC_URLS = {
+            "/", "/favicon.ico",
+            "/usuarios/registrar", "/usuarios/login", "/usuarios/perfil", "/usuarios/logout", "/usuarios/refresh",
+            "/api/productos/**", "/api/productos/destacados", "/api/productos/listado", "/productos/*", "/productos/resumen",
+            "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
+            "/api/posts/**", "/api/fragancias/**", "/api/categorias/**", "/api/atributos/**", "/api/productos/top5"
+    };
 
-    private final JwtFilter jwtFilterUtil;
+    private static final String[] ADMIN_URLS = {
+            "/admin/**",
+            "/usuarios", "/usuarios/listaDeUser", "/usuarios/{id}", "/usuarios/agregarUser",
+            "/usuarios/editarUser/{id}", "/usuarios/eliminarUser/{id}",
+            "/productos/agregar", "/productos/editar/{id}", "/productos/eliminar/{id}",
+            "/api/ofertas", "/api/ofertas/editar/{id}", "/api/ofertas/crearOferta", "/api/ofertas/eliminar/{id}",
+            "/pedidos/admin", "/pedidos/{id}/estado",
+            "/atributos", "/atributos/agregar", "/atributos/editar/{id}", "/atributos/eliminar/{id}",
+            "/detallePedidos/admin/{id}"
+    };
+
+    private static final String[] USER_URLS = {
+            "/pedidos/realizarPedido",
+            "/pedidos/realizarPedidoConPago",
+            "/api/pagos/**"
+    };
+
+    private final JwtFilter jwtFilter;
     private final CorsConfigurationSource corsConfigSource;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        configureBasicSecurity(http);
+        configureExceptionHandling(http);
+        configureAuthorization(http);
+        configurejwtFilter(http);
+        return http.build();
+    }
+
+    private void configureBasicSecurity(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigSource))
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(HttpStatus.FORBIDDEN.value());
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\": \"Acceso denegado\", \"message\": \"No tienes permisos para acceder a este recurso\"}");
-                        }))
-                .authorizeHttpRequests(auth -> auth
-                        // Preflight CORS
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+    }
 
-                        // Rutas públicas
-                        .requestMatchers(
-                                "/", "/favicon.ico",
-                                "/usuarios/registrar", "/usuarios/login", "/usuarios/perfil", "/usuarios/logout", "/usuarios/refresh",
-                                "/api/productos/**", "/api/productos/destacados", "/api/productos/listado", "/productos/*", "/productos/resumen",
-                                "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
-                                "/api/posts/**", "/api/fragancias/**", "/api/categorias/**", "/api/atributos/**", "/api/productos/top5"
-                        ).permitAll()
+    private void configureExceptionHandling(HttpSecurity http) throws Exception {
+        http.exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Acceso denegado\", \"message\": \"No tienes permisos para acceder a este recurso\"}");
+                }));
+    }
 
-                        // Admin
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(
-                                "/usuarios", "/usuarios/listaDeUser", "/usuarios/{id}", "/usuarios/agregarUser",
-                                "/usuarios/editarUser/{id}", "/usuarios/eliminarUser/{id}",
-                                "/productos/agregar", "/productos/editar/{id}", "/productos/eliminar/{id}",
-                                "/api/ofertas", "/api/ofertas/editar/{id}", "/api/ofertas/crearOferta", "/api/ofertas/eliminar/{id}",
-                                "/pedidos/admin", "/pedidos/{id}/estado",
-                                "/atributos", "/atributos/agregar", "/atributos/editar/{id}", "/atributos/eliminar/{id}",
-                                "/detallePedidos/admin/{id}"
-                        ).hasAuthority("ROLE_ADMIN")
+    private void configureAuthorization(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(PUBLIC_URLS).permitAll()
+                .requestMatchers(ADMIN_URLS).hasAuthority("ROLE_ADMIN")
+                .requestMatchers(USER_URLS).hasAuthority("ROLE_USER")
+                .anyRequest().authenticated()
+        );
+    }
 
-                        // Usuario normal
-                        .requestMatchers("/pedidos/realizarPedido", "/pedidos/realizarPedidoConPago", "/api/pagos/**")
-                        .hasAuthority("ROLE_USER")
-
-                        // Cualquier otra ruta requiere autenticación
-                        .anyRequest().authenticated()
-                )
-                // JWT Filter
-                .addFilterBefore(jwtFilterUtil, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+    private void configurejwtFilter(HttpSecurity http) {
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean
