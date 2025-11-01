@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categorias-blog")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "https://app-aroman.vercel.app")
 public class CategoriaBlogController {
 
     private final CategoriaBlogService service;

@@ -19,7 +19,7 @@ public class CorsConfig {
         String profile = System.getProperty("spring.profiles.active", "dev");
 
         if ("prod".equals(profile)) {
-            // URLs reales de producción
+            //URLs reales de producción
             configuration.setAllowedOriginPatterns(List.of(
 
                     "https://app-aroman.vercel.app"
