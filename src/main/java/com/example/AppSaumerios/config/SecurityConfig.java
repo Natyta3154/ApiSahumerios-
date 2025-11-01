@@ -30,7 +30,7 @@ public class SecurityConfig {
             // Ofertas
             "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
             // Blog y otros
-            "/api/posts/**", "/api/fragancias/**", "/api/categorias/**", "/api/atributos/**"
+            "/api/posts/listarPost", "/api/fragancias/listadoFragancias", "/api/categoria/listadoCat", "/api/atributos/listadoAtributos"
     };
 
     private static final String[] ADMIN_URLS = {

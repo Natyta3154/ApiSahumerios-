@@ -22,7 +22,7 @@ public class PostController {
     /**
      * 🔹 Listar todos los posts (público)
      */
-    @GetMapping
+    @GetMapping("/listarPost")
     public List<PostDTO> getAllPosts() {
         return service.getAllPosts();
     }
