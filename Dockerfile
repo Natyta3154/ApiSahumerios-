@@ -27,6 +27,9 @@ WORKDIR /app
 # Copiamos el JAR compilado desde la etapa de build
 COPY --from=build /app/target/AppSaumerios.jar ./app.jar
 
+ENV SPRING_PROFILES_ACTIVE=prod
+
+
 # Exponemos el puerto asignado por Render
 ENV PORT=8080
 EXPOSE $PORT

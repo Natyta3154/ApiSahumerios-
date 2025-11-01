@@ -94,6 +94,7 @@ public class UsuarioController {
                 .secure(!isDev()) // HTTPS solo en producción
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
+                .maxAge(Duration.ofHours(1))
                 .maxAge(usuario.getRol().equalsIgnoreCase("ADMIN") ? Duration.ofMinutes(30) : Duration.ofHours(1))
                 .build();
 
@@ -233,7 +234,9 @@ public class UsuarioController {
 
     // ===================== UTIL =====================
     private boolean isDev() {
-        String profile = System.getProperty("spring.profiles.active", "dev");
-        return profile.equals("dev");
+        String env = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (env == null) env = System.getProperty("spring.profiles.active", "dev");
+        return env.equalsIgnoreCase("dev");
     }
 }
+
