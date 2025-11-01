@@ -123,6 +123,7 @@ public class UsuarioController {
     }
 
     // ===================== REFRESH TOKEN =====================
+
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@CookieValue(value = "refreshToken", required = false) String refreshToken,
                                           HttpServletResponse response) {

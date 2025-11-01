@@ -2,6 +2,7 @@ package com.example.AppSaumerios.config;
 
 import com.example.AppSaumerios.jwrFilter.JwtFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,12 +19,18 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     private static final String[] PUBLIC_URLS = {
             "/", "/favicon.ico",
+            // Usuarios
             "/usuarios/registrar", "/usuarios/login", "/usuarios/perfil", "/usuarios/logout", "/usuarios/refresh",
-            "/api/productos/**", "/api/productos/destacados", "/api/productos/listado", "/productos/*", "/productos/resumen",
+            // Productos
+            "/api/productos/**", "/api/productos/destacados", "/api/productos/listado", "/api/productos/top5",
+            "/productos/*", "/productos/resumen",
+            // Ofertas
             "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
-            "/api/posts/**", "/api/fragancias/**", "/api/categorias/**", "/api/atributos/**", "/api/productos/top5"
+            // Blog y otros
+            "/api/posts/**", "/api/fragancias/**", "/api/categorias/**", "/api/atributos/**"
     };
 
     private static final String[] ADMIN_URLS = {
@@ -44,36 +51,30 @@ public class SecurityConfig {
     };
 
     private final JwtFilter jwtFilter;
-    private final CorsConfigurationSource corsConfigSource;
+
+    // 🔹 Especificamos el bean correcto con @Qualifier
+    private final @Qualifier("corsConfigurationSource") CorsConfigurationSource corsConfigSource;
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        configureBasicSecurity(http);
-        configureExceptionHandling(http);
-        configureAuthorization(http);
-        configurejwtFilter(http);
-        return http.build();
-    }
-
-    private void configureBasicSecurity(HttpSecurity http) throws Exception {
+        // Seguridad básica
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigSource))
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-    }
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-    private void configureExceptionHandling(HttpSecurity http) throws Exception {
+        // Manejo de excepciones
         http.exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                .accessDeniedHandler((request, response, ex) -> {
                     response.setStatus(HttpStatus.FORBIDDEN.value());
                     response.setContentType("application/json");
                     response.getWriter().write("{\"error\": \"Acceso denegado\", \"message\": \"No tienes permisos para acceder a este recurso\"}");
-                }));
-    }
+                })
+        );
 
-    private void configureAuthorization(HttpSecurity http) throws Exception {
+        // Autorizaciones
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(PUBLIC_URLS).permitAll()
@@ -81,10 +82,11 @@ public class SecurityConfig {
                 .requestMatchers(USER_URLS).hasAuthority("ROLE_USER")
                 .anyRequest().authenticated()
         );
-    }
 
-    private void configurejwtFilter(HttpSecurity http) {
+        // JWT Filter
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
