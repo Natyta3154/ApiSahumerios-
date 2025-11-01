@@ -227,7 +227,7 @@ public class JwtFilter extends OncePerRequestFilter {
         )) return true;
 
         // Blog
-        if (path.startsWith("/api/posts")) return true;
+        if (path.startsWith("/api/posts/listarPost")) return true;
         if (path.startsWith("/api/categoria-blog/listarCategoriaBlog")) return true;
 
         // Fragancias
@@ -241,7 +241,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 path.startsWith("/api/ofertas/con-precio") ||
                 path.startsWith("/api/ofertas/carrusel") ||
                 path.startsWith("/api/atributos/listadoAtributos") ||
-                path.startsWith("/api/categorias/listado")) return true;
+                path.startsWith("/api/categoria/listadoCat")) return true;
 
         // Todo lo demás requiere JWT
         return false;

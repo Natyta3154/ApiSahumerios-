@@ -23,18 +23,22 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Determina entorno actual
-        String profile = System.getProperty("spring.profiles.active", "dev");
-        if ("prod".equals(profile)) {
-            configuration.setAllowedOriginPatterns(List.of(PROD_URL));
-        } else {
-            configuration.setAllowedOrigins(DEV_URLS);
-        }
+        // 🔹 Siempre permitimos producción + local
+        configuration.setAllowedOriginPatterns(List.of(
+                PROD_URL,
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+        ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin",
-                "Access-Control-Request-Method", "Access-Control-Request-Headers"
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
@@ -42,6 +46,9 @@ public class CorsConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
+        // 🔍 Log útil para verificar en Render qué CORS se aplicó
+        System.out.println("✅ CORS configurado para orígenes: " + configuration.getAllowedOriginPatterns());
 
         return source;
     }
