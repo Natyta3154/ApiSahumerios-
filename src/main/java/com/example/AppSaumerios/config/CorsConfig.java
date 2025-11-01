@@ -63,7 +63,7 @@ public class CorsConfig {
 
     private void configureOrigins(CorsConfiguration configuration) {
         if (Environment.getCurrent() == Environment.PROD) {
-            configuration.setAllowedOriginPatterns(List.of(PROD_URL));
+            configuration.setAllowedOrigins(List.of(PROD_URL)); // origen exacto
         } else {
             configuration.setAllowedOrigins(DEV_URLS);
         }
@@ -79,7 +79,7 @@ public class CorsConfig {
     }
 
     private void configureGeneral(CorsConfiguration configuration) {
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
         configuration.setMaxAge(MAX_AGE);
     }
 }
