@@ -167,12 +167,14 @@ public class UsuarioController {
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         boolean isProd = "prod".equals(System.getProperty("spring.profiles.active", "dev"));
+        String domain = "apisahumerios-i8pd.onrender.com"; // dominio de la cookie original
 
         // Borrar cookies Access y Refresh
         ResponseCookie cookieAccess = ResponseCookie.from("token", "")
                 .httpOnly(true)
                 .secure(isProd)
                 .sameSite(isProd ? "None" : "Lax")
+                .domain(domain)  // <--- aquí
                 .path("/")
                 .maxAge(0)
                 .build();
@@ -181,6 +183,7 @@ public class UsuarioController {
                 .httpOnly(true)
                 .secure(isProd)
                 .sameSite(isProd ? "None" : "Lax")
+                .domain(domain)  // <--- aquí
                 .path("/")
                 .maxAge(0)
                 .build();
@@ -191,6 +194,7 @@ public class UsuarioController {
 
         return ResponseEntity.ok(Map.of("message", "Logout exitoso"));
     }
+
 
     // ===================== PERFIL =====================
 
