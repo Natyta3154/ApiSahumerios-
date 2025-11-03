@@ -45,10 +45,10 @@ public class MercadoPagoService {
 
     public String crearPreferenciaPago(Pedidos pedido) {
         try {
-            // ✅ Configurar el token de Mercado Pago
+            // Configurar token de Mercado Pago
             MercadoPagoConfig.setAccessToken(accessToken);
 
-            // ✅ Armar los ítems desde el pedido
+            // Armar los ítems desde el pedido
             List<PreferenceItemRequest> items = pedido.getDetalles().stream()
                     .map(detalle -> PreferenceItemRequest.builder()
                             .id(detalle.getProducto().getId().toString())
@@ -57,7 +57,7 @@ public class MercadoPagoService {
                             .categoryId("general")
                             .quantity(detalle.getCantidad())
                             .currencyId("ARS")
-                            .unitPrice(detalle.getProducto().getPrecio()) // ya es BigDecimal
+                            .unitPrice(detalle.getProducto().getPrecio())
                             .build())
                     .toList();
 
@@ -65,20 +65,18 @@ public class MercadoPagoService {
                 throw new IllegalArgumentException("El pedido no contiene productos válidos para generar la preferencia.");
             }
 
-            // ✅ URLs del backend (ajustá el dominio o túnel local)
-            String baseUrl = "https://miapptest.loca.lt"; // ⚠️ Cambiar si usás ngrok o dominio real
-            String successUrl = baseUrl + "/api/pagos/exito?pedido_id=" + pedido.getId();
-            String failureUrl = baseUrl + "/api/pagos/fallo?pedido_id=" + pedido.getId();
-            String pendingUrl = baseUrl + "/api/pagos/pendiente?pedido_id=" + pedido.getId();
+            // URLs del frontend (usando variable de entorno)
+            String successUrl = frontendUrl + "/checkout/exito?pedido_id=" + pedido.getId();
+            String failureUrl = frontendUrl + "/checkout/fallo?pedido_id=" + pedido.getId();
+            String pendingUrl = frontendUrl + "/checkout/pendiente?pedido_id=" + pedido.getId();
 
-            // ✅ Configurar las URLs de retorno
             PreferenceBackUrlsRequest backUrls = PreferenceBackUrlsRequest.builder()
                     .success(successUrl)
                     .failure(failureUrl)
                     .pending(pendingUrl)
                     .build();
 
-            // ✅ Crear la preferencia
+            // Crear la preferencia
             PreferenceRequest preferenceRequest = PreferenceRequest.builder()
                     .items(items)
                     .backUrls(backUrls)
@@ -90,11 +88,10 @@ public class MercadoPagoService {
             PreferenceClient client = new PreferenceClient();
             Preference preference = client.create(preferenceRequest);
 
-            // ✅ Guardar el ID de preferencia en el pedido
+            // Guardar ID de preferencia en el pedido
             pedido.setPreferenciaId(preference.getId());
             pedidoRepository.save(pedido);
 
-            // ✅ Retornar el link de pago para redirigir al usuario
             return preference.getInitPoint();
 
         } catch (MPApiException ex) {
@@ -105,6 +102,7 @@ public class MercadoPagoService {
             throw new RuntimeException("Error al crear preferencia de pago: " + ex.getMessage());
         }
     }
+
 
     public void procesarNotificacion(String id, String topic, String rawData) {
         try {

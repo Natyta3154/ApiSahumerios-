@@ -45,6 +45,28 @@ public class PedidosController {
     @Autowired
     private UsuarioService usuarioService;
 
+/*Enpoint de Prueba test
+    @GetMapping("/test-preferencia/{pedidoId}")
+    public ResponseEntity<?> testPreferencia(@PathVariable Long pedidoId) {
+        try {
+            Pedidos pedido = pedidoService.obtenerPedidoPorId(pedidoId);
+            // Usamos el mismo método del service, pero solo para obtener URLs
+            String successUrl = frontendUrl + "/checkout/exito?pedido_id=" + pedido.getId();
+            String failureUrl = frontendUrl + "/checkout/fallo?pedido_id=" + pedido.getId();
+            String pendingUrl = frontendUrl + "/checkout/pendiente?pedido_id=" + pedido.getId();
+
+            Map<String, String> urls = new HashMap<>();
+            urls.put("success", successUrl);
+            urls.put("failure", failureUrl);
+            urls.put("pending", pendingUrl);
+
+            return ResponseEntity.ok(urls);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }*/
+
+
     // =========================
     // Crear nuevo pedido (usuario logueado)
     // =========================
