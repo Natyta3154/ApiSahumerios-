@@ -205,17 +205,18 @@ public class PedidosController {
     public ResponseEntity<?> crearPreferenciaPago(@PathVariable Long pedidoId) {
         try {
             Pedidos pedido = pedidoService.obtenerPedidoPorId(pedidoId);
-            String preferenciaId = mercadoPagoService.crearPreferenciaPago(pedido);
+            String initPoint = mercadoPagoService.crearPreferenciaPago(pedido);
 
-            Map<String, String> response = new HashMap<>();
-            response.put("preferenciaId", preferenciaId);
-            response.put("initPoint", "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=" + preferenciaId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("init_point", initPoint);
+            response.put("pedido_id", pedido.getId());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error creando preferencia de pago: " + e.getMessage());
         }
     }
+
 
     // =========================
     // Helper: obtener usuario desde JWT

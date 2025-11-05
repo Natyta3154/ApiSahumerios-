@@ -53,19 +53,25 @@ public class MercadoPagoService {
                     .map(detalle -> PreferenceItemRequest.builder()
                             .id(detalle.getProducto().getId().toString())
                             .title(detalle.getProducto().getNombre())
-                            .description(detalle.getProducto().getDescripcion())
+                            .description(detalle.getProducto().getDescripcion() != null
+                                    ? detalle.getProducto().getDescripcion()
+                                    : "Producto sin descripción")
+                            .pictureUrl(detalle.getProducto().getImagenUrl())
                             .categoryId("general")
                             .quantity(detalle.getCantidad())
                             .currencyId("ARS")
-                            .unitPrice(detalle.getProducto().getPrecio())
+                            .unitPrice(detalle.getSubtotal()
+                                    .divide(BigDecimal.valueOf(detalle.getCantidad()), 2, java.math.RoundingMode.HALF_UP)) // ✅ calculado
                             .build())
                     .toList();
+
+
 
             if (items.isEmpty()) {
                 throw new IllegalArgumentException("El pedido no contiene productos válidos para generar la preferencia.");
             }
 
-            // URLs del frontend (usando variable de entorno)
+            // URLs del frontend
             String successUrl = frontendUrl + "/checkout/exito?pedido_id=" + pedido.getId();
             String failureUrl = frontendUrl + "/checkout/fallo?pedido_id=" + pedido.getId();
             String pendingUrl = frontendUrl + "/checkout/pendiente?pedido_id=" + pedido.getId();
@@ -92,7 +98,9 @@ public class MercadoPagoService {
             pedido.setPreferenciaId(preference.getId());
             pedidoRepository.save(pedido);
 
-            return preference.getInitPoint();
+            // Detectar sandbox o prod automáticamente
+            boolean esSandbox = accessToken != null && accessToken.startsWith("TEST");
+            return esSandbox ? preference.getSandboxInitPoint() : preference.getInitPoint();
 
         } catch (MPApiException ex) {
             System.err.println("⚠️ Error de API de MercadoPago: " + ex.getApiResponse().getContent());
@@ -102,6 +110,7 @@ public class MercadoPagoService {
             throw new RuntimeException("Error al crear preferencia de pago: " + ex.getMessage());
         }
     }
+
 
 
     public void procesarNotificacion(String id, String topic, String rawData) {
