@@ -94,6 +94,15 @@
 		</dependency>
 
 
+		<!-- para mail  -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
+
+
+
 		<!-- MercadoPago -->
 		<dependency>
 			<groupId>com.mercadopago</groupId>

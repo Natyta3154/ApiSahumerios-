@@ -223,8 +223,11 @@ public class JwtFilter extends OncePerRequestFilter {
                         path.startsWith("/api/productos/resumen") ||
                         path.startsWith("/api/productos/listado") ||
                         path.startsWith("/api/productos/top5") ||
+                        path.startsWith("/api/contacto/test") ||
                         path.matches("/api/productos/\\d+")
         )) return true;
+
+
 
         // Blog
         if (path.startsWith("/api/posts/listarPost")) return true;

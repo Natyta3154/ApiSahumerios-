@@ -31,12 +31,14 @@ public class SecurityConfig {
             "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
             // Blog y otros
             "/api/posts/listarPost", "/api/fragancias/listadoFragancias", "/api/categoria/listadoCat", "/api/atributos/listadoAtributos",
+            "/api/contacto/**",
 
             //MercadoPago
             "/pedidos/webhook/mercadopago",
             "/pedidos/checkout/exito",
             "/pedidos/checkout/fallo",
-            "/pedidos/checkout/pendiente"
+            "/pedidos/checkout/pendiente",
+
     };
 
     private static final String[] ADMIN_URLS = {
