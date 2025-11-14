@@ -31,7 +31,7 @@ public class SecurityConfig {
             "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
             // Blog y otros
             "/api/posts/listarPost", "/api/fragancias/listadoFragancias", "/api/categoria/listadoCat", "/api/atributos/listadoAtributos",
-            "/api/contacto/**",
+            "/api/contacto/enviar",
 
             //MercadoPago
             "/pedidos/webhook/mercadopago",
