@@ -94,8 +94,8 @@ public class UsuarioController {
                 .secure(!isDev()) // HTTPS solo en producción
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
-                .maxAge(Duration.ofHours(1))
-                .maxAge(usuario.getRol().equalsIgnoreCase("ADMIN") ? Duration.ofMinutes(30) : Duration.ofHours(1))
+                //.maxAge(Duration.ofHours(1))
+                //.maxAge(usuario.getRol().equalsIgnoreCase("ADMIN") ? Duration.ofMinutes(30) : Duration.ofHours(1))
                 .build();
 
         ResponseCookie cookieRefresh = ResponseCookie.from("refreshToken", refreshToken)

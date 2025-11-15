@@ -71,7 +71,7 @@ public class MercadoPagoService {
                 throw new IllegalArgumentException("El pedido no contiene productos válidos para generar la preferencia.");
             }
 
-            // URLs del frontend
+            //URLs del frontend
             String successUrl = frontendUrl + "/checkout/exito?pedido_id=" + pedido.getId();
             String failureUrl = frontendUrl + "/checkout/fallo?pedido_id=" + pedido.getId();
             String pendingUrl = frontendUrl + "/checkout/pendiente?pedido_id=" + pedido.getId();
