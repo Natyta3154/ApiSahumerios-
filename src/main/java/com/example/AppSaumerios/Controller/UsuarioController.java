@@ -200,9 +200,19 @@ public class UsuarioController {
 
     @GetMapping("/perfil")
     @PermitAll
-    public ResponseEntity<?> perfil(@CookieValue(value = "token", required = false) String token) {
-        if (token == null || jwtUtil.estaExpirado(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No hay sesión activa o token expirado");
+    public ResponseEntity<?> perfil(
+            @CookieValue(value = "token", required = false) String token) {
+
+        // Si no existe el token → no hay sesión
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No hay sesión activa"));
+        }
+
+        // Si el token existe pero está expirado
+        if (jwtUtil.estaExpirado(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Token expirado"));
         }
 
         try {
@@ -216,11 +226,16 @@ public class UsuarioController {
                     "rol", usuario.getRol()
             );
 
-            return ResponseEntity.ok(Map.of("usuario", userSafe));
+            return ResponseEntity.ok(
+                    Map.of("usuario", userSafe)
+            );
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Token inválido"));
         }
     }
+
 
     // ===================== ADMIN =====================
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
