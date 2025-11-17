@@ -24,6 +24,11 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
 
+
+
+
+
+
 	<dependencies>
 		<!-- Spring Boot starters -->
 		<dependency>
@@ -46,6 +51,9 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+
+
+
 
 		<!-- JWT -->
 		<dependency>
@@ -115,6 +123,15 @@
 			<artifactId>sdk-java</artifactId>
 			<version>2.1.7</version>
 		</dependency>
+
+		<!-- Resend oficial -->
+		<dependency>
+			<groupId>com.resendhq</groupId>
+			<artifactId>resend-java</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+
+
 
 		<!-- Lombok -->
 		<dependency>
