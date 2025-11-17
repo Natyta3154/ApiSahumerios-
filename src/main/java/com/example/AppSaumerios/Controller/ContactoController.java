@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/contacto")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // Ajustá al puerto de tu frontend React
+@CrossOrigin(origins = "http://localhost:9002", allowCredentials = "true") // Ajustá al puerto de tu frontend React
 public class ContactoController {
 
     private final EmailService emailService;
