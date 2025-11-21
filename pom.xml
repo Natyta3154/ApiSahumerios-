@@ -125,11 +125,11 @@
 		</dependency>
 
 		<!-- Resend oficial -->
-		<dependency>
+		<!--<dependency>
 			<groupId>com.resendhq</groupId>
 			<artifactId>resend-java</artifactId>
 			<version>1.0.1</version>
-		</dependency>
+		</dependency>-->
 
 
 
