@@ -198,43 +198,56 @@ public class UsuarioController {
 
     // ===================== PERFIL =====================
 
-    @GetMapping("/perfil")
+    @PutMapping("/perfil")
     @PermitAll
-    public ResponseEntity<?> perfil(
-            @CookieValue(value = "token", required = false) String token) {
+    public ResponseEntity<?> actualizarPerfil(
+            @CookieValue(value = "token", required = false) String token,
+            @RequestBody Map<String, Object> datosActualizados) {
 
-        // Si no existe el token → no hay sesión
-        if (token == null) {
+        // Si no hay token → no hay sesión
+        if (token == null || jwtUtil.estaExpirado(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "No hay sesión activa"));
-        }
-
-        // Si el token existe pero está expirado
-        if (jwtUtil.estaExpirado(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Token expirado"));
+                    .body(Map.of("error", "No hay sesión o token expirado"));
         }
 
         try {
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
             Usuarios usuario = usuarioService.buscarPorId(userId);
 
-            Map<String, Object> userSafe = Map.of(
-                    "id", usuario.getId(),
-                    "nombre", usuario.getNombre(),
-                    "email", usuario.getEmail(),
-                    "rol", usuario.getRol()
-            );
+            // Campos editables
+            if (datosActualizados.containsKey("nombre")) {
+                usuario.setNombre((String) datosActualizados.get("nombre"));
+            }
+            if (datosActualizados.containsKey("email")) {
+                usuario.setEmail((String) datosActualizados.get("email"));
+            }
 
-            return ResponseEntity.ok(
-                    Map.of("usuario", userSafe)
-            );
+            // Si quieres permitir cambio de contraseña, podrías agregarlo así:
+            Object nombreObj = datosActualizados.get("nombre");
+            if (nombreObj instanceof String nombre) {
+                usuario.setNombre(nombre);
+            }
+
+
+
+            usuarioService.guardar(usuario);
+
+            return ResponseEntity.ok(Map.of(
+                    "mensaje", "Perfil actualizado correctamente",
+                    "usuario", Map.of(
+                            "id", usuario.getId(),
+                            "nombre", usuario.getNombre(),
+                            "email", usuario.getEmail(),
+                            "rol", usuario.getRol()
+                    )
+            ));
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Token inválido"));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al actualizar el perfil"));
         }
     }
+
 
 
     // ===================== ADMIN =====================
