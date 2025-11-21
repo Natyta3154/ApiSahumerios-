@@ -19,7 +19,7 @@ import java.util.Map;
 @Service
 public class EmailService {
 
-    @Value("${resend.api.key}")
+    @Value("${mailersend.api.key}")
     private String apiKey;
 
     // @Autowired
