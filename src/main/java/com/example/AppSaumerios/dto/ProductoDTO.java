@@ -85,7 +85,7 @@ public class ProductoDTO {
     // ==============================
     // DTO Internos
     // ==============================
-    public static class ProductoAtributoDTO {
+    /*public static class ProductoAtributoDTO {
         private String nombre;
         private String valor;
 
@@ -98,7 +98,7 @@ public class ProductoDTO {
         public void setNombre(String nombre) { this.nombre = nombre; }
         public String getValor() { return valor; }
         public void setValor(String valor) { this.valor = valor; }
-    }
+    }*/
 
     public static class OfertaSimpleDTO {
         private Long idOferta;
@@ -149,4 +149,3 @@ public class ProductoDTO {
     }
 
 }
-

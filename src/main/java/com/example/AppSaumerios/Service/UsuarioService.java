@@ -5,16 +5,8 @@ import com.example.AppSaumerios.repository.UsuarioRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-
-// ============================================
-// UsuarioService.java
-// Lógica de negocio de usuarios:
-// - CRUD
-// - Validación de admin
-// - Login con encriptación de contraseñas
-// ============================================
-
 
 @Service
 public class UsuarioService {
@@ -27,27 +19,19 @@ public class UsuarioService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ===================== ADMIN ====================
+    // ===================== VALIDACIONES RÁPIDAS ====================
 
-    public void validarAdmin(Usuarios usuario) {
-        if (!"ADMIN".equalsIgnoreCase(usuario.getRol())) {
-            throw new SecurityException("Acceso denegado. Solo administradores.");
-        }
+    // Optimización: Verifica si existe sin traer todos los usuarios
+    public boolean existePorEmail(String email) {
+        return usuarioRepository.existsByEmail(email);
     }
 
-    public List<Usuarios> obtenerUsuarios() {
-        return usuarioRepository.findAll();
-    }
-
-    public Optional<Usuarios> obtenerUsuarioPorId(Long id) {
-        return usuarioRepository.findById(id);
-    }
-
-    // Nuevo método para perfil: devuelve usuario o lanza excepción
     public Usuarios buscarPorId(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con id " + id));
     }
+
+    // ===================== CREACIÓN (REGISTRO) ====================
 
     public Usuarios guardar(Usuarios usuario) {
         if (usuario.getEmail() == null || usuario.getEmail().isBlank()) {
@@ -57,6 +41,7 @@ public class UsuarioService {
             throw new IllegalArgumentException("La contraseña no puede estar vacía");
         }
 
+        // Normalización de ROL
         String rol = usuario.getRol();
         if (rol != null && !rol.isBlank()) {
             if (rol.startsWith("ROLE_")) {
@@ -68,32 +53,34 @@ public class UsuarioService {
         }
         usuario.setRol(rol);
 
+        // ENCRIPTAR PASSWORD (Solo para usuarios nuevos o cambios de pass explícitos)
         usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
 
         return usuarioRepository.save(usuario);
     }
 
-    public Usuarios actualizar(Long id, Usuarios usuarioActualizado) {
-        return usuarioRepository.findById(id)
-                .map(usuario -> {
-                    usuario.setNombre(usuarioActualizado.getNombre());
-                    usuario.setEmail(usuarioActualizado.getEmail());
-                    if (usuarioActualizado.getPassword() != null && !usuarioActualizado.getPassword().isBlank()) {
-                        usuario.setPassword(passwordEncoder.encode(usuarioActualizado.getPassword()));
-                    }
-                    String rol = usuarioActualizado.getRol();
-                    if (rol != null && !rol.isBlank()) {
-                        if (rol.startsWith("ROLE_")) {
-                            rol = rol.substring(5);
-                        }
-                        rol = rol.toUpperCase();
-                    } else {
-                        rol = "USER";
-                    }
-                    usuario.setRol(rol);
-                    return usuarioRepository.save(usuario);
-                })
-                .orElseThrow(() -> new IllegalArgumentException("El usuario con id " + id + " no existe"));
+    // ===================== ACTUALIZACIÓN DE PERFIL (SAFE) ====================
+
+    // Este método actualiza SOLO nombre y email sin romper la contraseña
+    public Usuarios actualizarDatosPersonales(Long id, Map<String, Object> datos) {
+        Usuarios usuario = buscarPorId(id);
+
+        if (datos.containsKey("nombre")) {
+            usuario.setNombre((String) datos.get("nombre"));
+        }
+        if (datos.containsKey("email")) {
+            usuario.setEmail((String) datos.get("email"));
+        }
+
+        // NOTA: No tocamos el password aquí para evitar el "doble hash"
+
+        return usuarioRepository.save(usuario);
+    }
+
+    // ===================== ADMIN / CRUD ====================
+
+    public List<Usuarios> obtenerUsuarios() {
+        return usuarioRepository.findAll();
     }
 
     public void eliminar(Long id) {
@@ -103,7 +90,7 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
-    // ===================== USUARIO COMÚN =====================
+    // ===================== LOGIN =====================
     public Optional<Usuarios> login(String email, String password) {
         Optional<Usuarios> usuarioOpt = usuarioRepository.findByEmail(email);
         if (usuarioOpt.isPresent()) {

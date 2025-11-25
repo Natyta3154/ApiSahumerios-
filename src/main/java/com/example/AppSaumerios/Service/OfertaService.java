@@ -6,7 +6,9 @@ import com.example.AppSaumerios.entity.Ofertas;
 import com.example.AppSaumerios.entity.Productos;
 import com.example.AppSaumerios.repository.OfertaRepository;
 import com.example.AppSaumerios.repository.ProductoRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,7 +29,7 @@ public class OfertaService {
 // Productos para carrusel: solo ofertas activas
 // =========================
     public List<ProductoOfertaDTO> obtenerProductosCarrusel(int limite) {
-        // 1️⃣ Obtener todas las ofertas activas y filtrar las que tengan descuento
+        // Obtener todas las ofertas activas y filtrar las que tengan descuento
         List<ProductoOfertaDTO> productosConOferta = listarOfertasConPrecioFinal().stream()
                 .filter(p -> p.getPrecioConDescuento().compareTo(p.getPrecioOriginal()) != 0) // tiene descuento
                 .sorted((p1, p2) -> p2.getPrecioOriginal().compareTo(p1.getPrecioOriginal())) // ordenar por precio descendente
@@ -43,6 +45,7 @@ public class OfertaService {
     // =========================
     // Crear o actualizar oferta
     // =========================
+    @CacheEvict(value = "ofertasTop", allEntries = true)
     public Ofertas crearOferta(OfertaDTO dto) {
         if (dto.getProductoId() == null) {
             throw new RuntimeException("El producto es obligatorio");
@@ -91,6 +94,7 @@ public class OfertaService {
     // =========================
     // Listar productos con precio final aplicado
     // =========================
+    @Cacheable("ofertasTop")
     public List<ProductoOfertaDTO> listarOfertasConPrecioFinal() {
         return ofertaRepository.findAll().stream()
                 .map(this::mapToDTO)
@@ -125,6 +129,7 @@ public class OfertaService {
     // =========================
     // Eliminar oferta
     // =========================
+    @CacheEvict(value = "ofertasTop", allEntries = true)
     public void eliminar(Long id) {
         ofertaRepository.deleteById(id);
     }

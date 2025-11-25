@@ -1,18 +1,19 @@
 package com.example.AppSaumerios.util;
 
-import com.example.AppSaumerios.dto.ProductoDTO;
+import com.example.AppSaumerios.dto.*;
 import com.example.AppSaumerios.dto.ProductoDTO.OfertaSimpleDTO;
-import com.example.AppSaumerios.dto.OfertaDTO;
-import com.example.AppSaumerios.dto.ProductoUpdateDTO;
 import com.example.AppSaumerios.entity.Fragancia;
 import com.example.AppSaumerios.entity.ProductoAtributo;
 import com.example.AppSaumerios.entity.Productos;
+import org.springframework.stereotype.Component;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Component
 public class ProductoMapper {
 
     // =========================
@@ -33,16 +34,18 @@ public class ProductoMapper {
         dto.setCategoriaNombre(
                 producto.getCategoria() != null ? producto.getCategoria().getNombre() : null
         );
+        // ...
         dto.setDestacado(producto.getDestacado());
 
         // ✅ Atributos como List
-        List<ProductoDTO.ProductoAtributoDTO> atributos = producto.getProductoAtributos().stream()
-                .map(pa -> new ProductoDTO.ProductoAtributoDTO(
+        List<ProductoAtributoDTO> atributos = producto.getProductoAtributos().stream()
+                .map(pa -> new ProductoAtributoDTO(
                         pa.getAtributo().getNombre(),
                         pa.getValor()
                 ))
                 .collect(Collectors.toList());
         dto.setAtributos(atributos);
+// ...
 
         // ✅ Fragancias como List
         List<String> fragancias = producto.getFragancias().stream()
@@ -145,6 +148,24 @@ public class ProductoMapper {
 
         return dto;
 
+    }
+
+    // En ProductoMapper.java (Añadir este método)
+
+    public ProductoDestacadoDTO toDestacadoDTO(Productos producto) {
+        if (producto == null) {
+            return null;
+        }
+
+        // Asumiendo que ProductoDestacadoDTO tiene un constructor que toma:
+        // (Long id, String nombre, String descripcion, BigDecimal precio, String imagenUrl)
+        return new ProductoDestacadoDTO(
+                producto.getId(),
+                producto.getNombre(),
+                producto.getDescripcion(),
+                producto.getPrecio(),
+                producto.getImagenUrl()
+        );
     }
 
 }

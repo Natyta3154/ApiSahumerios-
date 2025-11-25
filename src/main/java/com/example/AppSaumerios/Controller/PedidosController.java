@@ -227,8 +227,7 @@ public class PedidosController {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             Long usuarioId = jwtUtil.obtenerIdDesdeToken(token);
-            return usuarioService.obtenerUsuarioPorId(usuarioId)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            return usuarioService.buscarPorId(usuarioId);
         }
 
         // Revisar cookies
@@ -237,8 +236,7 @@ public class PedidosController {
                 if (cookie.getName().equals("token")) {
                     String token = cookie.getValue();
                     Long usuarioId = jwtUtil.obtenerIdDesdeToken(token);
-                    return usuarioService.obtenerUsuarioPorId(usuarioId)
-                            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                    return usuarioService.buscarPorId(usuarioId);
                 }
             }
         }

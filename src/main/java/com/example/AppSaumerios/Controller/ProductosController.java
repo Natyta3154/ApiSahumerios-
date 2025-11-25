@@ -65,6 +65,9 @@ public class ProductosController {
     @Autowired
     private AtributoRepository atributoRepository;
 
+    @Autowired
+    private ProductoMapper productoMapper;
+
     // -------------------
     // ENDPOINTS PÚBLICOS
     // -------------------
@@ -116,30 +119,40 @@ public class ProductosController {
                 .collect(Collectors.toList());
     }
 
+
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductoDTO> buscarPorId(@PathVariable Long id) {
-        Optional<Productos> productoOpt = productoservice.buscarPorId(id);
-        if (productoOpt.isEmpty()) return ResponseEntity.notFound().build();
+        try {
+            // 1. CORRECCIÓN: Llamar al servicio y esperar la entidad Productos directamente.
+            Productos producto = productoservice.buscarPorId(id);
 
-        // Convertir ProductoOfertaDTO a OfertaDTO
-        List<OfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal().stream()
-                .map(of -> {
-                    OfertaDTO dto = new OfertaDTO();
-                    dto.setIdOferta(of.getId());
-                    dto.setProductoId(of.getId());
-                    dto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
-                    dto.setTipoDescuento("MONTO");
-                    dto.setFechaInicio(of.getFechaInicio());
-                    dto.setFechaFin(of.getFechaFin());
-                    dto.setEstado(true);
-                    dto.setNombreProducto(of.getNombre());
-                    dto.setPrecio(of.getPrecioOriginal());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+            // Convertir ProductoOfertaDTO a OfertaDTO (Lógica de mapeo preservada)
+            List<OfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal().stream()
+                    .map(of -> {
+                        OfertaDTO dto = new OfertaDTO();
+                        dto.setIdOferta(of.getId());
+                        dto.setProductoId(of.getId());
+                        // Nota: Asumo que getId() en el ProductoOfertaDTO ya devuelve el ID de la oferta
+                        dto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
+                        dto.setTipoDescuento("MONTO");
+                        dto.setFechaInicio(of.getFechaInicio());
+                        dto.setFechaFin(of.getFechaFin());
+                        dto.setEstado(true);
+                        dto.setNombreProducto(of.getNombre());
+                        dto.setPrecio(of.getPrecioOriginal());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
 
-        ProductoDTO dto = ProductoMapper.toDTO(productoOpt.get(), todasLasOfertas);
-        return ResponseEntity.ok(dto);
+            // Mapeo final (Usando la entidad 'producto' directamente)
+            ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
+            return ResponseEntity.ok(dto);
+
+        } catch (NoSuchElementException ex) {
+            // 2. Manejo de error: El servicio lanza esta excepción si no encuentra el producto (404 Not Found)
+            return ResponseEntity.notFound().build();
+        }
     }
 
 
@@ -187,88 +200,24 @@ public class ProductosController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/agregar")
-    public ResponseEntity<ProductoDTO> agregarProducto(@RequestBody ProductoDTO request) {
-        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
+    public ResponseEntity<ProductoDTO> agregarProducto(@Valid @RequestBody ProductoDTO dto) {
+        try {
+            // 📢 DELEGACIÓN: El Service se encarga de toda la lógica de validación, creación y actualización.
+            Productos productoCreadoOActualizado = productoservice.crearOActualizarProducto(dto);
 
-        Optional<Productos> productoExistente = productoRepository.findByNombre(request.getNombre());
+            // 2. Mapear la entidad resultante para la respuesta (siempre debe ir en el Controller/Facade)
+            List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
+            ProductoDTO dtoResponse = productoMapper.toDTO(productoCreadoOActualizado, todasLasOfertas);
 
-        if (productoExistente.isPresent()) {
-            Productos producto = productoExistente.get();
-            int stockNuevo = request.getStock() != null ? request.getStock() : 0;
-            int totalNuevo = request.getTotalIngresado() != null ? request.getTotalIngresado() : stockNuevo;
+            // El Service puede devolver el mensaje, o lo definimos aquí si solo es éxito.
+            dtoResponse.setMensaje("Producto procesado correctamente (creado o stock actualizado)");
+            return ResponseEntity.ok(dtoResponse);
 
-            producto.setStock(producto.getStock() + stockNuevo);
-            producto.setTotalIngresado(producto.getTotalIngresado() + totalNuevo);
-
-            productoRepository.save(producto);
-
-            ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
-            dto.setMensaje("Producto existente actualizado: stock y total ingresado sumados");
-            return ResponseEntity.ok(dto);
+        } catch (IllegalArgumentException ex) {
+            ProductoDTO errorDto = new ProductoDTO();
+            errorDto.setMensaje(ex.getMessage());
+            return ResponseEntity.badRequest().body(errorDto);
         }
-
-        Productos producto = new Productos();
-        producto.setNombre(request.getNombre());
-        producto.setDescripcion(request.getDescripcion());
-        producto.setPrecio(request.getPrecio());
-        producto.setPrecioMayorista(request.getPrecioMayorista() != null ? request.getPrecioMayorista() : request.getPrecio());
-        producto.setStock(request.getStock() != null ? request.getStock() : 0);
-        producto.setTotalIngresado(request.getTotalIngresado() != null ? request.getTotalIngresado() : producto.getStock());
-        producto.setImagenUrl(request.getImagenUrl());
-        producto.setActivo(request.getActivo() != null ? request.getActivo() : true);
-        producto.setFechaCreacion(LocalDateTime.now());
-
-        // Categoría
-        Categoria categoria = categoriaRepository.findByNombre(request.getCategoriaNombre())
-                .orElseGet(() -> {
-                    Categoria nuevaCategoria = new Categoria();
-                    nuevaCategoria.setNombre(request.getCategoriaNombre());
-                    nuevaCategoria.setDescripcion("Creada automáticamente al agregar producto");
-                    return categoriaRepository.save(nuevaCategoria);
-                });
-        producto.setCategoria(categoria);
-        producto.setIdCategoria(categoria.getId());
-
-        // Guardar producto antes de relaciones
-        producto = productoRepository.save(producto);
-
-        // Fragancias
-        List<Fragancia> fragancias = new ArrayList<>();
-        if (request.getFragancias() != null) {
-            for (String nombreFragancia : request.getFragancias()) {
-                Fragancia fragancia = fraganciaRepository.findByNombre(nombreFragancia)
-                        .orElseGet(() -> {
-                            Fragancia nueva = new Fragancia();
-                            nueva.setNombre(nombreFragancia);
-                            return fraganciaRepository.save(nueva);
-                        });
-                fragancias.add(fragancia);
-            }
-        }
-        producto.setFragancias(fragancias);
-
-        // Atributos
-        if (request.getAtributos() != null) {
-            for (ProductoDTO.ProductoAtributoDTO attrDTO : request.getAtributos()) {
-                String nombreAttr = attrDTO.getNombre();
-                String valorAttr = attrDTO.getValor();
-                if (nombreAttr != null && valorAttr != null) {
-                    Atributo atributo = atributoRepository.findByNombre(nombreAttr)
-                            .orElseGet(() -> {
-                                Atributo nuevo = new Atributo();
-                                nuevo.setNombre(nombreAttr);
-                                return atributoRepository.save(nuevo);
-                            });
-                    producto.addAtributo(atributo, valorAttr);
-                }
-            }
-        }
-
-        productoRepository.save(producto);
-
-        ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
-        dto.setMensaje("Producto agregado correctamente");
-        return ResponseEntity.ok(dto);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")

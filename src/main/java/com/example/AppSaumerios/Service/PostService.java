@@ -6,7 +6,10 @@ import com.example.AppSaumerios.repository.CategoriaBlogRepository;
 import com.example.AppSaumerios.repository.PostRepository;
 import com.example.AppSaumerios.dto.PostDTO;
 import com.example.AppSaumerios.dto.CategoriaBlogDTO;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +27,7 @@ public class PostService {
     }
 
     /** 🔹 Obtener todos los posts como DTOs (público) */
+    @Cacheable("postsList")
     public List<PostDTO> getAllPosts() {
         return repository.findAll().stream()
                 .map(this::convertToDTO)
@@ -38,6 +42,7 @@ public class PostService {
     }
 
     /** 🔹 Crear un post (ADMIN) */
+    @CacheEvict(value = "postsList", allEntries = true)
     public PostDTO savePost(Post post) {
         Long catId = post.getCategoria() != null ? post.getCategoria().getId() : null;
         if (catId == null) {
@@ -75,6 +80,7 @@ public class PostService {
         return convertToDTO(updated);
     }
     /** 🔹 Eliminar un post (ADMIN) */
+    @CacheEvict(value = "postsList", allEntries = true)
     public void deletePost(Long id) {
         repository.deleteById(id);
     }

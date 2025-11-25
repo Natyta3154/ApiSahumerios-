@@ -48,9 +48,8 @@ public class UsuarioController {
             return ResponseEntity.badRequest().body(Map.of("error", "Datos inválidos"));
         }
 
-        boolean emailExistente = usuarioService.obtenerUsuarios().stream()
-                .anyMatch(u -> u.getEmail().equalsIgnoreCase(nuevoUsuario.getEmail()));
-        if (emailExistente) {
+        // CORRECCIÓN: Usamos existsPorEmail (más rápido que traer toda la lista)
+        if (usuarioService.existePorEmail(nuevoUsuario.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "El email ya está registrado"));
         }
@@ -69,7 +68,6 @@ public class UsuarioController {
     }
 
     // ===================== LOGIN =====================
-    // ===================== LOGIN =====================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
         Optional<Usuarios> usuarioOpt = usuarioService.login(
@@ -84,18 +82,14 @@ public class UsuarioController {
 
         Usuarios usuario = usuarioOpt.get();
 
-        // Generar access token y refresh token
         String accessToken = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
         String refreshToken = jwtUtil.generarRefreshToken(usuario.getId());
 
-        // Cookies configuradas según entorno
         ResponseCookie cookieAccess = ResponseCookie.from("token", accessToken)
                 .httpOnly(true)
-                .secure(!isDev()) // HTTPS solo en producción
+                .secure(!isDev())
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
-                //.maxAge(Duration.ofHours(1))
-                //.maxAge(usuario.getRol().equalsIgnoreCase("ADMIN") ? Duration.ofMinutes(30) : Duration.ofHours(1))
                 .build();
 
         ResponseCookie cookieRefresh = ResponseCookie.from("refreshToken", refreshToken)
@@ -106,11 +100,9 @@ public class UsuarioController {
                 .maxAge(Duration.ofDays(7))
                 .build();
 
-        // Añadir cookies al response
         response.addHeader(HttpHeaders.SET_COOKIE, cookieAccess.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh.toString());
 
-        // Respuesta al frontend
         Map<String, Object> responseBody = Map.of(
                 "usuario", Map.of(
                         "id", usuario.getId(),
@@ -124,7 +116,6 @@ public class UsuarioController {
     }
 
     // ===================== REFRESH TOKEN =====================
-
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@CookieValue(value = "refreshToken", required = false) String refreshToken,
                                           HttpServletResponse response) {
@@ -133,20 +124,14 @@ public class UsuarioController {
                     .body(Map.of("error", "No hay refresh token"));
         }
 
-        if (!jwtUtil.validarToken(refreshToken)) {
+        if (!jwtUtil.validarToken(refreshToken) || jwtUtil.estaExpirado(refreshToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Refresh token inválido"));
-        }
-
-        if (jwtUtil.estaExpirado(refreshToken)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Refresh token expirado"));
+                    .body(Map.of("error", "Refresh token inválido o expirado"));
         }
 
         Long userId = jwtUtil.obtenerIdDesdeToken(refreshToken);
         Usuarios usuario = usuarioService.buscarPorId(userId);
 
-        // Generar nuevo access token
         String nuevoAccessToken = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
 
         ResponseCookie cookie = ResponseCookie.from("token", nuevoAccessToken)
@@ -154,27 +139,26 @@ public class UsuarioController {
                 .secure(!isDev())
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
-                .maxAge(2 * 60 * 60) // 2 horas en segundos
+                .maxAge(2 * 60 * 60)
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
         return ResponseEntity.ok(Map.of("message", "Access token renovado"));
     }
-
 
     // ===================== LOGOUT =====================
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        boolean isProd = "prod".equals(System.getProperty("spring.profiles.active", "dev"));
-        String domain = "apisahumerios-i8pd.onrender.com"; // dominio de la cookie original
+        boolean isProd = !isDev();
 
-        // Borrar cookies Access y Refresh
+        // CORRECCIÓN: Dominio dinámico. Null para localhost, url real para prod.
+        String domain = isProd ? "apisahumerios-i8pd.onrender.com" : null;
+
         ResponseCookie cookieAccess = ResponseCookie.from("token", "")
                 .httpOnly(true)
                 .secure(isProd)
                 .sameSite(isProd ? "None" : "Lax")
-                .domain(domain)  // <--- aquí
+                .domain(domain)
                 .path("/")
                 .maxAge(0)
                 .build();
@@ -183,28 +167,24 @@ public class UsuarioController {
                 .httpOnly(true)
                 .secure(isProd)
                 .sameSite(isProd ? "None" : "Lax")
-                .domain(domain)  // <--- aquí
+                .domain(domain)
                 .path("/")
                 .maxAge(0)
                 .build();
 
-        logger.info("LOGOUT - DELETE COOKIES: {}, {}", cookieAccess, cookieRefresh);
         response.addHeader(HttpHeaders.SET_COOKIE, cookieAccess.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh.toString());
 
         return ResponseEntity.ok(Map.of("message", "Logout exitoso"));
     }
 
-
     // ===================== PERFIL =====================
-
     @PutMapping("/perfil")
     @PermitAll
     public ResponseEntity<?> actualizarPerfil(
             @CookieValue(value = "token", required = false) String token,
             @RequestBody Map<String, Object> datosActualizados) {
 
-        // Si no hay token → no hay sesión
         if (token == null || jwtUtil.estaExpirado(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "No hay sesión o token expirado"));
@@ -212,25 +192,9 @@ public class UsuarioController {
 
         try {
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
-            Usuarios usuario = usuarioService.buscarPorId(userId);
 
-            // Campos editables
-            if (datosActualizados.containsKey("nombre")) {
-                usuario.setNombre((String) datosActualizados.get("nombre"));
-            }
-            if (datosActualizados.containsKey("email")) {
-                usuario.setEmail((String) datosActualizados.get("email"));
-            }
-
-            // Si quieres permitir cambio de contraseña, podrías agregarlo así:
-            Object nombreObj = datosActualizados.get("nombre");
-            if (nombreObj instanceof String nombre) {
-                usuario.setNombre(nombre);
-            }
-
-
-
-            usuarioService.guardar(usuario);
+            // CORRECCIÓN: Usamos el método seguro que NO re-encripta la contraseña
+            Usuarios usuario = usuarioService.actualizarDatosPersonales(userId, datosActualizados);
 
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Perfil actualizado correctamente",
@@ -243,12 +207,11 @@ public class UsuarioController {
             ));
 
         } catch (Exception e) {
+            logger.error("Error actualizando perfil", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error al actualizar el perfil"));
         }
     }
-
-
 
     // ===================== ADMIN =====================
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -268,7 +231,6 @@ public class UsuarioController {
     private boolean isDev() {
         String env = System.getenv("SPRING_PROFILES_ACTIVE");
         if (env == null) env = System.getProperty("spring.profiles.active", "dev");
-        return env.equalsIgnoreCase("dev");
+        return env != null && env.equalsIgnoreCase("dev");
     }
 }
-
