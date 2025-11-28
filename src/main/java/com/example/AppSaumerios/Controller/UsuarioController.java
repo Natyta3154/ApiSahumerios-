@@ -67,9 +67,13 @@ public class UsuarioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+
+
+
     // ===================== LOGIN =====================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
+        // 1. Autenticar al usuario
         Optional<Usuarios> usuarioOpt = usuarioService.login(
                 credenciales.getEmail(),
                 credenciales.getPassword()
@@ -82,12 +86,15 @@ public class UsuarioController {
 
         Usuarios usuario = usuarioOpt.get();
 
+        // 2. Generar Tokens
         String accessToken = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
         String refreshToken = jwtUtil.generarRefreshToken(usuario.getId());
 
+        // 3. Construir Cookies HttpOnly
         ResponseCookie cookieAccess = ResponseCookie.from("token", accessToken)
                 .httpOnly(true)
                 .secure(!isDev())
+                // Nota: Para SameSite=None, secure debe ser true, lo cual ya manejas con isDev()
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
                 .build();
@@ -97,21 +104,28 @@ public class UsuarioController {
                 .secure(!isDev())
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
-                .maxAge(Duration.ofDays(7))
+                .maxAge(Duration.ofDays(7)) // Token de Refresco de larga duración
                 .build();
 
+        // 4. Añadir las Cookies a la Respuesta
+        // Se recomienda usar HttpHeaders.SET_COOKIE para mayor claridad.
+        // Aunque ResponseCookie se maneja bien, aseguramos que se envíen ambas cabeceras.
         response.addHeader(HttpHeaders.SET_COOKIE, cookieAccess.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh.toString());
 
+        // 5. Preparar el Cuerpo de la Respuesta con los datos del usuario
         Map<String, Object> responseBody = Map.of(
                 "usuario", Map.of(
                         "id", usuario.getId(),
                         "nombre", usuario.getNombre(),
                         "email", usuario.getEmail(),
                         "rol", usuario.getRol()
-                )
+                ),
+                // Opcional: Puedes añadir un mensaje de éxito
+                "mensaje", "Inicio de sesión exitoso"
         );
 
+        // 6. Devolver la Respuesta
         return ResponseEntity.ok(responseBody);
     }
 

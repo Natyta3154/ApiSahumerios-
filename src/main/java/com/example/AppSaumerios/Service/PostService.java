@@ -26,7 +26,7 @@ public class PostService {
         this.categoriaRepository = categoriaRepository;
     }
 
-    /** 🔹 Obtener todos los posts como DTOs (público) */
+    /** 🔹 Obtener todos los posts comoDTOs (público) */
     @Cacheable("postsList")
     public List<PostDTO> getAllPosts() {
         return repository.findAll().stream()
@@ -58,6 +58,8 @@ public class PostService {
         return convertToDTO(saved);
     }
 
+
+    /**  Actualizar Post Admin */
     public PostDTO updatePost(Long id, Post postActualizado) {
         Post existente = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado con ID: " + id));
