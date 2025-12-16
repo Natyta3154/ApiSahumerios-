@@ -23,7 +23,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_URLS = {
             "/", "/favicon.ico",
             // Usuarios
-            "/usuarios/register", "/usuarios/login", "/usuarios/perfil", "/usuarios/logout", "/usuarios/refresh",
+            "/usuarios/register", "/usuarios/login", "/usuarios/perfil", "/usuarios/logout", "/usuarios/refresh","/usuarios/forgot-password", "/usuarios/reset-password",
             // Productos
             "/api/productos/**", "/api/productos/destacados", "/api/productos/listado", "/api/productos/top5",
             "/productos/*", "/productos/resumen",

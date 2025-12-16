@@ -1,6 +1,8 @@
 package com.example.AppSaumerios.Controller;
 
 import com.example.AppSaumerios.Service.UsuarioService;
+import com.example.AppSaumerios.dto.ForgotPasswordRequest; // 💡 Importar DTO
+import com.example.AppSaumerios.dto.ResetPasswordRequest;   // 💡 Importar DTO
 import com.example.AppSaumerios.entity.Usuarios;
 import com.example.AppSaumerios.util.JwtUtil;
 import jakarta.annotation.security.PermitAll;
@@ -44,11 +46,11 @@ public class UsuarioController {
     // ===================== REGISTRO =====================
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody Usuarios nuevoUsuario, BindingResult result) {
+        // ... (código existente de register) ...
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Datos inválidos"));
         }
 
-        // CORRECCIÓN: Usamos existsPorEmail (más rápido que traer toda la lista)
         if (usuarioService.existePorEmail(nuevoUsuario.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "El email ya está registrado"));
@@ -68,12 +70,10 @@ public class UsuarioController {
     }
 
 
-
-
     // ===================== LOGIN =====================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Usuarios credenciales, HttpServletResponse response) {
-        // 1. Autenticar al usuario
+        // ... (código existente de login) ...
         Optional<Usuarios> usuarioOpt = usuarioService.login(
                 credenciales.getEmail(),
                 credenciales.getPassword()
@@ -86,15 +86,12 @@ public class UsuarioController {
 
         Usuarios usuario = usuarioOpt.get();
 
-        // 2. Generar Tokens
         String accessToken = jwtUtil.generarToken(usuario.getId(), usuario.getRol());
         String refreshToken = jwtUtil.generarRefreshToken(usuario.getId());
 
-        // 3. Construir Cookies HttpOnly
         ResponseCookie cookieAccess = ResponseCookie.from("token", accessToken)
                 .httpOnly(true)
                 .secure(!isDev())
-                // Nota: Para SameSite=None, secure debe ser true, lo cual ya manejas con isDev()
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
                 .build();
@@ -104,16 +101,12 @@ public class UsuarioController {
                 .secure(!isDev())
                 .sameSite(isDev() ? "Lax" : "None")
                 .path("/")
-                .maxAge(Duration.ofDays(7)) // Token de Refresco de larga duración
+                .maxAge(Duration.ofDays(7))
                 .build();
 
-        // 4. Añadir las Cookies a la Respuesta
-        // Se recomienda usar HttpHeaders.SET_COOKIE para mayor claridad.
-        // Aunque ResponseCookie se maneja bien, aseguramos que se envíen ambas cabeceras.
         response.addHeader(HttpHeaders.SET_COOKIE, cookieAccess.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh.toString());
 
-        // 5. Preparar el Cuerpo de la Respuesta con los datos del usuario
         Map<String, Object> responseBody = Map.of(
                 "usuario", Map.of(
                         "id", usuario.getId(),
@@ -121,11 +114,9 @@ public class UsuarioController {
                         "email", usuario.getEmail(),
                         "rol", usuario.getRol()
                 ),
-                // Opcional: Puedes añadir un mensaje de éxito
                 "mensaje", "Inicio de sesión exitoso"
         );
 
-        // 6. Devolver la Respuesta
         return ResponseEntity.ok(responseBody);
     }
 
@@ -133,6 +124,7 @@ public class UsuarioController {
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@CookieValue(value = "refreshToken", required = false) String refreshToken,
                                           HttpServletResponse response) {
+        // ... (código existente de refresh) ...
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "No hay refresh token"));
@@ -163,9 +155,8 @@ public class UsuarioController {
     // ===================== LOGOUT =====================
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
+        // ... (código existente de logout) ...
         boolean isProd = !isDev();
-
-        // CORRECCIÓN: Dominio dinámico. Null para localhost, url real para prod.
         String domain = isProd ? "apisahumerios-i8pd.onrender.com" : null;
 
         ResponseCookie cookieAccess = ResponseCookie.from("token", "")
@@ -198,7 +189,7 @@ public class UsuarioController {
     public ResponseEntity<?> actualizarPerfil(
             @CookieValue(value = "token", required = false) String token,
             @RequestBody Map<String, Object> datosActualizados) {
-
+        // ... (código existente de actualizar perfil) ...
         if (token == null || jwtUtil.estaExpirado(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "No hay sesión o token expirado"));
@@ -206,8 +197,6 @@ public class UsuarioController {
 
         try {
             Long userId = jwtUtil.obtenerIdDesdeToken(token);
-
-            // CORRECCIÓN: Usamos el método seguro que NO re-encripta la contraseña
             Usuarios usuario = usuarioService.actualizarDatosPersonales(userId, datosActualizados);
 
             return ResponseEntity.ok(Map.of(
@@ -240,6 +229,61 @@ public class UsuarioController {
         usuarioService.eliminar(id);
         return ResponseEntity.ok("Usuario eliminado correctamente");
     }
+
+    // ===============================================================
+    // 🔑 ENDPOINTS DE RESTABLECIMIENTO DE CONTRASEÑA
+    // ===============================================================
+
+    /**
+     * POST /usuarios/forgot-password/olvido contraseña
+     * Solicita el envío de un enlace de restablecimiento al email proporcionado.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+
+        // Llamamos al servicio. El servicio maneja la lógica de buscar, generar token, y enviar email.
+        usuarioService.createPasswordResetToken(request.getEmail());
+
+        // Respuesta genérica de éxito por motivos de seguridad
+        return ResponseEntity.ok(
+                Map.of("message", "Si la si el correo existe, se ha enviado un enlace de restablecimiento al correo electrónico.")
+        );
+    }
+
+    /**
+     * POST /usuarios/reset-password
+     * Restablece la contraseña usando el token y el email de los query parameters.
+     * La nueva contraseña va en el cuerpo de la solicitud.
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @RequestParam("token") String token,
+            @RequestParam("email") String email,
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        if (token == null || token.isBlank() || email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Token o email faltante."));
+        }
+
+        try {
+            // Usamos la nueva contraseña del body del request
+            boolean success = usuarioService.resetPassword(token, email, request.getNewPassword());
+
+            if (success) {
+                return ResponseEntity.ok(Map.of("message", "Contraseña restablecida con éxito."));
+            } else {
+                // Token no válido, expirado o email incorrecto.
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        Map.of("error", "El enlace de restablecimiento es inválido o ha expirado. Por favor, solicita uno nuevo.")
+                );
+            }
+        } catch (Exception e) {
+            logger.error("Error al procesar restablecimiento de contraseña", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error interno al intentar restablecer la contraseña."));
+        }
+    }
+
 
     // ===================== UTIL =====================
     private boolean isDev() {

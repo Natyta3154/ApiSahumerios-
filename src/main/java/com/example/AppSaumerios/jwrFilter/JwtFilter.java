@@ -208,12 +208,15 @@ public class JwtFilter extends OncePerRequestFilter {
         // Siempre permitir preflight
         if ("OPTIONS".equalsIgnoreCase(method)) return true;
 
-        // Rutas públicas de usuarios (corregidas)
+        // 💡 Bloque de Rutas Públicas de Usuarios (MODIFICADO)
         if (path.startsWith("/usuarios/register") ||
                 path.startsWith("/usuarios/login") ||
                 path.startsWith("/usuarios/logout") ||
                 path.startsWith("/usuarios/perfil") ||
-                path.startsWith("/usuarios/refresh")) {
+                path.startsWith("/usuarios/refresh") ||
+                // 🔑 Rutas de restablecimiento AÑADIDAS
+                path.startsWith("/usuarios/forgot-password") ||
+                path.startsWith("/usuarios/reset-password")) {
             return true;
         }
 
