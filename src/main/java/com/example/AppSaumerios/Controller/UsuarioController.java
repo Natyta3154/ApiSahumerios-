@@ -8,6 +8,7 @@ import com.example.AppSaumerios.util.JwtUtil;
 import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -185,18 +186,17 @@ public class UsuarioController {
 
     // ===================== PERFIL =====================
     @PutMapping("/perfil")
-    @PermitAll
     public ResponseEntity<?> actualizarPerfil(
-            @CookieValue(value = "token", required = false) String token,
+            Authentication authentication,
             @RequestBody Map<String, Object> datosActualizados) {
-        // ... (código existente de actualizar perfil) ...
-        if (token == null || jwtUtil.estaExpirado(token)) {
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "No hay sesión o token expirado"));
         }
 
         try {
-            Long userId = jwtUtil.obtenerIdDesdeToken(token);
+            Long userId = Long.parseLong((String) authentication.getPrincipal());
             Usuarios usuario = usuarioService.actualizarDatosPersonales(userId, datosActualizados);
 
             return ResponseEntity.ok(Map.of(

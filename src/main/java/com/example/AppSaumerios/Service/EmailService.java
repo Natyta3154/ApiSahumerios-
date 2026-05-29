@@ -3,6 +3,7 @@ package com.example.AppSaumerios.Service;
 import com.example.AppSaumerios.dto.ContactoRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value; // 💡 Necesario para inyectar propiedades
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.internet.MimeMessage;
@@ -23,6 +24,7 @@ public class EmailService {
     // ============================================
     // 1. Método Existente (Contacto)
     // ============================================
+    @Async
     public void enviarCorreoContacto(ContactoRequest contacto) {
 
         try {
@@ -76,6 +78,7 @@ public class EmailService {
      * @param destinatario Correo del usuario que solicita el cambio.
      * @param resetLink URL completa con el token para el frontend.
      */
+    @Async
     public void enviarCorreoRestablecimiento(String destinatario, String resetLink) {
 
         try {

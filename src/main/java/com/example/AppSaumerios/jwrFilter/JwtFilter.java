@@ -212,7 +212,6 @@ public class JwtFilter extends OncePerRequestFilter {
         if (path.startsWith("/usuarios/register") ||
                 path.startsWith("/usuarios/login") ||
                 path.startsWith("/usuarios/logout") ||
-                path.startsWith("/usuarios/perfil") ||
                 path.startsWith("/usuarios/refresh") ||
                 // 🔑 Rutas de restablecimiento AÑADIDAS
                 path.startsWith("/usuarios/forgot-password") ||

@@ -176,6 +176,28 @@ public class PedidosController {
             String id = params.get("id");
             String topic = params.get("topic");
 
+            // Si los parámetros de consulta están vacíos, intentamos extraer del cuerpo JSON (Webhook oficial)
+            if ((id == null || id.isBlank() || topic == null || topic.isBlank()) && rawData != null && !rawData.isBlank()) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(rawData);
+                    
+                    if (rootNode.has("data") && rootNode.get("data").has("id")) {
+                        id = rootNode.get("data").get("id").asText();
+                    }
+                    if (rootNode.has("type")) {
+                        topic = rootNode.get("type").asText();
+                    }
+                } catch (Exception parseException) {
+                    System.err.println("⚠️ Error parseando JSON de Webhook de MercadoPago: " + parseException.getMessage());
+                }
+            }
+
+            if (id == null || id.isBlank() || topic == null || topic.isBlank()) {
+                System.err.println("⚠️ Notificación de MercadoPago recibida sin ID o Topic válidos. Parámetros: " + params + ", Body: " + rawData);
+                return ResponseEntity.badRequest().body("Notificación inválida: Faltan ID o Topic");
+            }
+
             mercadoPagoService.procesarNotificacion(id, topic, rawData);
             return ResponseEntity.ok("Webhook recibido correctamente");
         } catch (Exception e) {

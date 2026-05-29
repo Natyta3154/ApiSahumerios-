@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,15 +18,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private static final String[] PUBLIC_URLS = {
             "/", "/favicon.ico",
             // Usuarios
-            "/usuarios/register", "/usuarios/login", "/usuarios/perfil", "/usuarios/logout", "/usuarios/refresh","/usuarios/forgot-password", "/usuarios/reset-password",
+            "/usuarios/register", "/usuarios/login", "/usuarios/logout", "/usuarios/refresh","/usuarios/forgot-password", "/usuarios/reset-password",
             // Productos
-            "/api/productos/**", "/api/productos/destacados", "/api/productos/listado", "/api/productos/top5",
             "/productos/*", "/productos/resumen",
             // Ofertas
             "/api/ofertas/listar", "/api/ofertas/con-precio", "/api/ofertas/carrusel",
@@ -85,6 +86,7 @@ public class SecurityConfig {
         // Autorizaciones
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/productos/**").permitAll()
                 .requestMatchers(PUBLIC_URLS).permitAll()
                 .requestMatchers(ADMIN_URLS).hasAuthority("ROLE_ADMIN")
                 .requestMatchers(USER_URLS).hasAuthority("ROLE_USER")

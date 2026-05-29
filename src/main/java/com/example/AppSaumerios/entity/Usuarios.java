@@ -3,6 +3,8 @@ package com.example.AppSaumerios.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 // ============================================
 // Usuarios.java
@@ -27,6 +29,7 @@ public class Usuarios {
     private String email;
 
     @NotBlank(message = "La contraseña no puede estar vacía")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private String rol;
@@ -42,12 +45,14 @@ public class Usuarios {
      * Solo tiene valor mientras el usuario está en el proceso de restablecer.
      */
     @Column(name = "reset_password_token")
+    @JsonIgnore
     private String resetPasswordToken;
 
     /**
      * Fecha y hora en que expira el token de restablecimiento.
      */
     @Column(name = "reset_password_expiry_date")
+    @JsonIgnore
     private LocalDateTime resetPasswordExpiryDate;
 
 
