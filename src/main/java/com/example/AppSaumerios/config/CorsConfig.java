@@ -7,28 +7,29 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.util.List;
 
 @Configuration
 public class CorsConfig {
 
-    private static final String PROD_FRONTEND = "https://app-aroman.vercel.app"; // tu frontend en Vercel
-    private static final String PROD_BACKEND = "https://apisahumerios-i8pd.onrender.com"; // tu backend en Render
+    @Value("${frontend.url.prod}")
+    private String prodFrontend;
 
-    private static final List<String> DEV_URLS = List.of(
-            "http://localhost:9002",
-            "http://localhost:8080"
-    );
+    @Value("${frontend.url.dev}")
+    private String devFrontend;
 
     @Bean
     @Primary
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 🔹 Siempre permitimos producción + local
+        // 🔹 Siempre permitimos producción + local configurado en properties
         configuration.setAllowedOriginPatterns(List.of(
-                PROD_FRONTEND,
-                PROD_BACKEND,
+                prodFrontend,
+                devFrontend,
+                "https://apisahumerios-i8pd.onrender.com",
                 "http://localhost:*",
                 "http://127.0.0.1:*"
         ));
