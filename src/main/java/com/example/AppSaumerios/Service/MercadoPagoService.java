@@ -48,26 +48,31 @@ public class MercadoPagoService {
             // Configurar token de Mercado Pago
             MercadoPagoConfig.setAccessToken(accessToken);
 
-            // Armar los ítems desde el pedido
-            List<PreferenceItemRequest> items = pedido.getDetalles().stream()
-                    .map(detalle -> PreferenceItemRequest.builder()
-                            .id(detalle.getProducto().getId().toString())
-                            .title(detalle.getProducto().getNombre())
-                            .description(detalle.getProducto().getDescripcion() != null
-                                    ? detalle.getProducto().getDescripcion()
-                                    : "Producto sin descripción")
-                            .pictureUrl(detalle.getProducto().getImagenUrl())
-                            .categoryId("general")
-                            .quantity(detalle.getCantidad())
-                            .currencyId("ARS")
-                            .unitPrice(detalle.getSubtotal()
-                                    .divide(BigDecimal.valueOf(detalle.getCantidad()), 2, java.math.RoundingMode.HALF_UP)) // ✅ calculado
-                            .build())
-                    .toList();
+            // Armar un título descriptivo con los nombres de los productos
+            String descripcionProductos = pedido.getDetalles().stream()
+                    .map(detalle -> detalle.getCantidad() + "x " + detalle.getProducto().getNombre())
+                    .collect(java.util.stream.Collectors.joining(", "));
 
+            // Mercado Pago tiene un límite en el título (usualmente 256 caracteres)
+            if (descripcionProductos.length() > 250) {
+                descripcionProductos = descripcionProductos.substring(0, 247) + "...";
+            }
 
+            // Enviamos un solo ítem que engloba todo el pedido para que MercadoPago 
+            // muestre el texto descriptivo directamente en la pantalla principal.
+            PreferenceItemRequest itemResumen = PreferenceItemRequest.builder()
+                    .id("PEDIDO-" + pedido.getId())
+                    .title(descripcionProductos)
+                    .description("Pedido #" + pedido.getId())
+                    .categoryId("general")
+                    .quantity(1)
+                    .currencyId("ARS")
+                    .unitPrice(pedido.getTotal())
+                    .build();
 
-            if (items.isEmpty()) {
+            List<PreferenceItemRequest> items = List.of(itemResumen);
+
+            if (pedido.getDetalles().isEmpty()) {
                 throw new IllegalArgumentException("El pedido no contiene productos válidos para generar la preferencia.");
             }
 

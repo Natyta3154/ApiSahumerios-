@@ -89,7 +89,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/productos/**").permitAll()
                 .requestMatchers(PUBLIC_URLS).permitAll()
                 .requestMatchers(ADMIN_URLS).hasAuthority("ROLE_ADMIN")
-                .requestMatchers(USER_URLS).hasAuthority("ROLE_USER")
+                .requestMatchers(USER_URLS).hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                 .anyRequest().authenticated()
         );
 
