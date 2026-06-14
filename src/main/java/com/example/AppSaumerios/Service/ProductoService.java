@@ -54,7 +54,7 @@ public class ProductoService {
                 .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con ID: " + id));
     }
 
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché al guardar/actualizar
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché al guardar/actualizar
     public Productos guardarProductos(Productos productos) {
         validarStockYPrecio(productos);
         return productoRepository.save(productos);
@@ -63,7 +63,7 @@ public class ProductoService {
     // =========================
     // LÓGICA DE NEGOCIO CRÍTICA: Crear o Actualizar Stock (Migrado del Controller)
     // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché al crear/actualizar stock
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché al crear/actualizar stock
     @Transactional
     public Productos crearOActualizarProducto(ProductoDTO request) {
 
@@ -184,7 +184,7 @@ public class ProductoService {
     }
 
     // Cachable: cachea la lista general de DTOs destacados
-    @Cacheable("productosTop")
+    @Cacheable("productosDestacadosDTO")
     @Transactional(readOnly = true)
     public List<ProductoDTO> obtenerProductosDestacadosDTO() {
         List<Productos> productos = productoRepository.findDestacadosConRelaciones();
@@ -203,7 +203,7 @@ public class ProductoService {
     // =========================
     // Actualizar campos básicos del producto
     // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché al actualizar
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché al actualizar
     @Transactional
     public Productos actualizarCamposBasicos(Long id, ProductoUpdateDTO dto) {
         Productos producto = buscarPorId(id); // Uso del método corregido
@@ -223,7 +223,7 @@ public class ProductoService {
     }
 
     // Método pendiente de la corrección anterior
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true)// Limpia caché al actualizar masivamente
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true)// Limpia caché al actualizar masivamente
     @Transactional
     public void actualizarPreciosMasivos(Long categoriaId, BigDecimal precio, BigDecimal precioMayorista) {
         if (precio == null || precioMayorista == null || categoriaId == null) {
@@ -236,7 +236,7 @@ public class ProductoService {
     // =========================
     // Actualizar categoría
     // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché
     @Transactional
     public Productos actualizarCategoria(Long id, String nombreCategoria) {
         Productos producto = buscarPorId(id); // Uso del método corregido
@@ -257,7 +257,7 @@ public class ProductoService {
     // =========================
     // Actualizar fragancias
     // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché
     @Transactional
     public Productos actualizarFragancias(Long id, List<String> fraganciasNombres) {
         Productos producto = buscarPorId(id); // Uso del método corregido
@@ -281,7 +281,7 @@ public class ProductoService {
     // =========================
 // Actualizar atributos
 // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché
     @Transactional
     public Productos actualizarAtributos(Long id, List<ProductoAtributoDTO> atributosDTO) {
         // 📢 CORRECCIÓN: La firma ya no usa ProductoDTO.ProductoAtributoDTO
@@ -315,7 +315,7 @@ public class ProductoService {
     // =========================
     // Eliminar producto
     // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché al eliminar
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché al eliminar
     @Transactional
     public String eliminarProductos(Long id) {
         Productos producto = buscarPorId(id); // Uso del método corregido
@@ -341,7 +341,7 @@ public class ProductoService {
     // =========================
     // Vender producto
     // =========================
-    @CacheEvict(value = {"productosTop", "productosDestacados"}, allEntries = true) // Limpia caché al vender (cambia stock)
+    @CacheEvict(value = {"productosTopGenerales", "productosTopPorCategoria", "productosDestacadosDTO", "productosDestacados"}, allEntries = true) // Limpia caché al vender (cambia stock)
     @Transactional
     public Productos venderProducto(Long productoId, int cantidadVendida) {
         Productos producto = buscarPorId(productoId); // Uso del método corregido
@@ -364,7 +364,7 @@ public class ProductoService {
     }
 
     // Cachable: cachea la lista general de DTOs destacados
-    @Cacheable("productosTop")
+    @Cacheable("productosTopGenerales")
     public List<ProductoDestacadoDTO> obtenerTop5Generales() {
         return productoRepository.findTop4ByActivoTrueOrderByPrecioDesc()
                 .stream()
@@ -373,7 +373,7 @@ public class ProductoService {
     }
 
     // Cachable: cachea la lista de DTOs destacados por categoría
-    @Cacheable(value = "productosTop", key = "#categoriaId")
+    @Cacheable(value = "productosTopPorCategoria", key = "#categoriaId != null ? #categoriaId : 'general'")
     public List<ProductoDestacadoDTO> obtenerTop5PorCategoria(Long categoriaId) {
         return productoRepository.findTop4ByActivoTrueAndCategoria_IdOrderByPrecioDesc(categoriaId)
                 .stream()

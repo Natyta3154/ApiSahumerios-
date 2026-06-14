@@ -95,24 +95,7 @@ public class ProductosController {
     @GetMapping("/listado")
     public List<ProductoDTO> listarTodos() {
         List<Productos> productos = productoservice.listarTodos();
-
-        // Convertir ProductoOfertaDTO a OfertaDTO
-        List<OfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal().stream()
-                .map(of -> {
-                    OfertaDTO dto = new OfertaDTO();
-                    dto.setIdOferta(of.getId());
-                    dto.setProductoId(of.getId()); // <-- acá necesitás un método que devuelva el productoId
-                    dto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
-                    dto.setTipoDescuento("MONTO");
-                    dto.setFechaInicio(of.getFechaInicio());
-                    dto.setFechaFin(of.getFechaFin());
-                    dto.setEstado(true);
-                    dto.setNombreProducto(of.getNombre());
-                    dto.setPrecio(of.getPrecioOriginal());
-                    return dto;
-                })
-                .collect(Collectors.toList());
-
+        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
 
         return productos.stream()
                 .map(producto -> ProductoMapper.toDTO(producto, todasLasOfertas))
@@ -127,23 +110,7 @@ public class ProductosController {
             // 1. CORRECCIÓN: Llamar al servicio y esperar la entidad Productos directamente.
             Productos producto = productoservice.buscarPorId(id);
 
-            // Convertir ProductoOfertaDTO a OfertaDTO (Lógica de mapeo preservada)
-            List<OfertaDTO> todasLasOfertas = ofertaService.listarOfertasConPrecioFinal().stream()
-                    .map(of -> {
-                        OfertaDTO dto = new OfertaDTO();
-                        dto.setIdOferta(of.getId());
-                        dto.setProductoId(of.getId());
-                        // Nota: Asumo que getId() en el ProductoOfertaDTO ya devuelve el ID de la oferta
-                        dto.setValorDescuento(of.getPrecioOriginal().subtract(of.getPrecioConDescuento()));
-                        dto.setTipoDescuento("MONTO");
-                        dto.setFechaInicio(of.getFechaInicio());
-                        dto.setFechaFin(of.getFechaFin());
-                        dto.setEstado(true);
-                        dto.setNombreProducto(of.getNombre());
-                        dto.setPrecio(of.getPrecioOriginal());
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
+            List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
 
             // Mapeo final (Usando la entidad 'producto' directamente)
             ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
