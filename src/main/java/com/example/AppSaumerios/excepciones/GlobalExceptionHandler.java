@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.util.NoSuchElementException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -23,6 +24,17 @@ public class GlobalExceptionHandler {
                 ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    // ❌ Error de concurrencia (Optimistic Locking)
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(ObjectOptimisticLockingFailureException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                "El producto fue actualizado o comprado por otro usuario en este momento. Por favor, recarga y vuelve a intentarlo."
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     // ❌ Argumentos inválidos (ej: stock negativo, cantidad inválida, etc.)

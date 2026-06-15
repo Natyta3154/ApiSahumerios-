@@ -106,20 +106,10 @@ public class ProductosController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductoDTO> buscarPorId(@PathVariable Long id) {
-        try {
-            // 1. CORRECCIÓN: Llamar al servicio y esperar la entidad Productos directamente.
-            Productos producto = productoservice.buscarPorId(id);
-
-            List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
-
-            // Mapeo final (Usando la entidad 'producto' directamente)
-            ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
-            return ResponseEntity.ok(dto);
-
-        } catch (NoSuchElementException ex) {
-            // 2. Manejo de error: El servicio lanza esta excepción si no encuentra el producto (404 Not Found)
-            return ResponseEntity.notFound().build();
-        }
+        Productos producto = productoservice.buscarPorId(id);
+        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
+        ProductoDTO dto = ProductoMapper.toDTO(producto, todasLasOfertas);
+        return ResponseEntity.ok(dto);
     }
 
 
@@ -168,23 +158,12 @@ public class ProductosController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/agregar")
     public ResponseEntity<ProductoDTO> agregarProducto(@Valid @RequestBody ProductoDTO dto) {
-        try {
-            // 📢 DELEGACIÓN: El Service se encarga de toda la lógica de validación, creación y actualización.
-            Productos productoCreadoOActualizado = productoservice.crearOActualizarProducto(dto);
+        Productos productoCreadoOActualizado = productoservice.crearOActualizarProducto(dto);
+        List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
+        ProductoDTO dtoResponse = productoMapper.toDTO(productoCreadoOActualizado, todasLasOfertas);
 
-            // 2. Mapear la entidad resultante para la respuesta (siempre debe ir en el Controller/Facade)
-            List<OfertaDTO> todasLasOfertas = ofertaService.obtenerTodasLasOfertasDTO();
-            ProductoDTO dtoResponse = productoMapper.toDTO(productoCreadoOActualizado, todasLasOfertas);
-
-            // El Service puede devolver el mensaje, o lo definimos aquí si solo es éxito.
-            dtoResponse.setMensaje("Producto procesado correctamente (creado o stock actualizado)");
-            return ResponseEntity.ok(dtoResponse);
-
-        } catch (IllegalArgumentException ex) {
-            ProductoDTO errorDto = new ProductoDTO();
-            errorDto.setMensaje(ex.getMessage());
-            return ResponseEntity.badRequest().body(errorDto);
-        }
+        dtoResponse.setMensaje("Producto procesado correctamente (creado o stock actualizado)");
+        return ResponseEntity.ok(dtoResponse);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")

@@ -22,6 +22,10 @@ public class Productos {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @Column(name = "total_ingresado")
     private Integer totalIngresado = 0;
 
@@ -143,6 +147,9 @@ public class Productos {
     // ======================
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 
     public Integer getTotalIngresado() { return totalIngresado; }
     public void setTotalIngresado(Integer totalIngresado) { this.totalIngresado = totalIngresado; }

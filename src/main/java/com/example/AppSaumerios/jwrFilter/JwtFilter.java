@@ -91,9 +91,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     return; // error ya enviado al cliente
                 }
             } else {
-                logger.debug("[{}] No se encontró token JWT para endpoint protegido", requestId);
-                enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token requerido");
-                return;
+                logger.debug("[{}] No se encontró token JWT. La solicitud continuará para validación de Spring Security.", requestId);
             }
 
             filterChain.doFilter(request, response);
@@ -197,58 +195,5 @@ public class JwtFilter extends OncePerRequestFilter {
         }
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        String method = request.getMethod();
 
-        // Evitar loop en endpoints de error
-        if (path.startsWith("/error")) return true;
-
-        // Siempre permitir preflight
-        if ("OPTIONS".equalsIgnoreCase(method)) return true;
-
-        // 💡 Bloque de Rutas Públicas de Usuarios (MODIFICADO)
-        if (path.startsWith("/usuarios/register") ||
-                path.startsWith("/usuarios/login") ||
-                path.startsWith("/usuarios/logout") ||
-                path.startsWith("/usuarios/refresh") ||
-                // 🔑 Rutas de restablecimiento AÑADIDAS
-                path.startsWith("/usuarios/forgot-password") ||
-                path.startsWith("/usuarios/reset-password")) {
-            return true;
-        }
-
-        // Endpoints públicos de productos
-        if ("GET".equalsIgnoreCase(method) && (
-                path.startsWith("/api/productos") ||
-                        path.startsWith("/api/productos/resumen") ||
-                        path.startsWith("/api/productos/listado") ||
-                        path.startsWith("/api/productos/top5") ||
-                        path.matches("/api/productos/\\d+")
-        )) return true;
-
-// Endpoints públicos (contacto siempre permitido)
-        if (path.startsWith("/api/contacto/enviar")) return true;
-
-        // Blog
-        if (path.startsWith("/api/posts/listarPost")) return true;
-        if (path.startsWith("/api/categoria-blog/listarCategoriaBlog")) return true;
-
-        // Fragancias
-        if (path.startsWith("/api/fragancias/listadoFragancias")) return true;
-
-        // Categoría pública
-        if (path.startsWith("/atributos/listado")) return true;
-
-        // Ofertas / Atributos
-        if (path.startsWith("/api/ofertas/listar") ||
-                path.startsWith("/api/ofertas/con-precio") ||
-                path.startsWith("/api/ofertas/carrusel") ||
-                path.startsWith("/api/atributos/listadoAtributos") ||
-                path.startsWith("/api/categoria/listadoCat")) return true;
-
-        // Todo lo demás requiere JWT
-        return false;
-    }
 }
