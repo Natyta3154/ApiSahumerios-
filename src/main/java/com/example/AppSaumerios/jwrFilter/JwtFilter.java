@@ -87,8 +87,8 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = extraerToken(request);
 
             if (token != null) {
-                if (!validarYConfigurarAutenticacion(token, response, requestId)) {
-                    return; // error ya enviado al cliente
+                if (!validarYConfigurarAutenticacion(token, requestId)) {
+                    logger.debug("[{}] Token inválido o expirado. Se continúa sin contexto de seguridad.", requestId);
                 }
             } else {
                 logger.debug("[{}] No se encontró token JWT. La solicitud continuará para validación de Spring Security.", requestId);
@@ -131,10 +131,9 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
 
-    private boolean validarYConfigurarAutenticacion(String token, HttpServletResponse response, String requestId) {
+    private boolean validarYConfigurarAutenticacion(String token, String requestId) {
         try {
             if (token == null || token.trim().isEmpty()) {
-                enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token vacío");
                 return false;
             }
 
@@ -142,7 +141,6 @@ public class JwtFilter extends OncePerRequestFilter {
             String rol = jwtUtil.obtenerRolDesdeToken(token);
 
             if (userId == null || rol == null || rol.isBlank()) {
-                enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token con información incompleta");
                 return false;
             }
 
@@ -162,11 +160,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
             logger.warn("[{}] Token expirado", requestId);
-            enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token expirado");
             return false;
         } catch (Exception e) {
             logger.warn("[{}] Token inválido: {}", requestId, e.getMessage());
-            enviarError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token inválido");
             return false;
         }
     }
